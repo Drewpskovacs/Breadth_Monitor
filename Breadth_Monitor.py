@@ -10,10 +10,12 @@ from datetime import datetime, timedelta
 import sys
 import yfinance as yf
 import numpy as np
+from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from itertools import cycle
-# import seaborn as sns
+from matplotlib.figure import Figure
+from matplotlib.table import Table
+from matplotlib.colors import LinearSegmentedColormap
 
 #####################################
 # Variables - Setup
@@ -42,7 +44,7 @@ yahoo_idx_components_dictionary = {
     10: {'idx_code': 'CL=F', 'market': 'crude', 'codes_csv': 'none'},
     11: {'idx_code': 'ZN=F', 'market': '10yrTnote', 'codes_csv': 'none'},
     12: {'idx_code': 'ZT=F', 'market': '2yrTnote', 'codes_csv': 'none'},
-    13: {'idx_code': '^VIX', 'market': 'vix', 'codes_csv': 'none'},
+    # 13: {'idx_code': '^VIX', 'market': 'vix', 'codes_csv': 'none'},
     14: {'idx_code': 'IDIV.SA', 'market': 'dividends', 'codes_csv': 'none'},
     15: {'idx_code': 'IFIX.SA', 'market': 'fii', 'codes_csv': 'none'},
     16: {'idx_code': '^IBX50', 'market': 'ibx50', 'codes_csv': 'none'}
@@ -54,19 +56,16 @@ compare_index_list = [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
 filtered_index_dict = {key: {'idx_code': value['idx_code'], 'market': value['market']}
                        for key, value in yahoo_idx_components_dictionary.items() if key in compare_index_list}
 
-#####################################
 # Variables for breadth and plots
-#####################################
-
 mas_to_use = [1, 5, 12, 25, 40, 50, 100, 200]  # Moving average: 1 is used as 'Close'
 time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 
+# For table
+rows = 20
+percentiles = [0.1, 0.2, 0.8, 0.9]
 
-##########################################################################
+
 # -----------------------------FUNCTIONS----------------------------------
-##########################################################################
-
-
 ##########################################################################
 # Work with all indices or choose one
 ##########################################################################
@@ -326,6 +325,8 @@ def update_index_data(idx):
 
     # Check the last idx volume is zero. If so, drop last row (and update for that day)
     last_volume_in_idx = index_df['Volume'].iloc[-1]
+    print(f'Last volume in df = {last_volume_in_idx}')
+    print(f'Last date in df = {index_df.index[-1]}')
     if last_volume_in_idx == 0:
         # (Yahoo seems to be a day late with volume on indexes)
         day_with_zero_volume = index_df.index[-1]
@@ -338,6 +339,8 @@ def update_index_data(idx):
         # start update on day after last day in file
         start_update_on = index_df.index[-1] + timedelta(days=1)
 
+    print(f'Start update on: {start_update_on}')
+    print(f'Last date in file is today: {until_date <= start_update_on}')
     # Checking last day not today
     if until_date <= start_update_on:
         print('Not updated: end update on  <= start update on')
@@ -348,10 +351,10 @@ def update_index_data(idx):
         print(f'Updated until: {until_date}')
         print(f'Time now: {datetime.now().strftime("%H:%M")}')
         # Collect missing days
-        missing_days = yf.download(idx_code, start=start_update_on, end=until_date, rounding=True)
+        missing_days = yf.download(idx, start=start_update_on, end=until_date, rounding=True)
         # Convert the indexes to DateTimeIndex
         missing_days.index = pd.to_datetime(missing_days.index)
-        print(f'Downloaded recent data for {idx_code}.')
+        print(f'Downloaded recent data for {idx}.')
         # Join update to original
         updated_idx = pd.concat([index_df, missing_days], axis=0).loc[
             ~pd.concat([index_df, missing_days], axis=0).index.duplicated(keep='first')]
@@ -362,9 +365,9 @@ def update_index_data(idx):
         # Check and save index file as csv
         if not updated_idx.tail(10).isnull().values.any():
             updated_idx.to_csv(idx_file)
-            print(f'{idx_code} seems OK, updated until: {updated_until}. Filename= {idx_file}')
+            print(f'{idx} seems OK, updated until: {updated_until}. Filename= {idx_file}')
         else:
-            print('{idx_code} has NaN in added lines. Check update.')
+            print('{idx} has NaN in added lines. Check update.')
 
     return updated_idx
 
@@ -1418,76 +1421,49 @@ def plot_normalized_indexes(mkt_dict, idx):
 ##########################################################################
 # Function to apply color to cells of dataframe
 ##########################################################################
+def breadth_table(df, r):
 
-def breadth(table):
-    global lookback
+    global percentiles
 
-    print(f"Table columns: {table.columns}")
-    print(f'Table index type: {table.index.dtype}')
-    print(f"Columns dtypes: {table.dtypes}")
-    """
-    DATAFRAMES
-    high_low_df,
-    over_short_mas_pct,
-    over_40ma_pct,
-    over_long_mas_pct,
-    mvrs_sum,
-    br_ratios,
-    adr_df,
-    idx_df,
-    acc_vol_df
+    # print(f"Table columns: {df.columns}")
+    # print(f'Table index type: {df.index.dtype}')
+    # print(f"Columns dtypes: {df.dtypes}")
 
-    COLUMN NAMES
-    'Date'
-    'ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML'
-    '$>MA5', '$>MA12', '$>MA25', '$>MA40', '$>MA50', '$>MA100', '$>MA200'
-    '>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d', '<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d'
-    'ratio5', 'ratio10', 'tftdr'
-    'adv_dec_ratio'
-    'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
-    'CumVol'
-    """
+    df = df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
+    df.to_csv('use_for_percentiles.csv')
 
-    table = table[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
+    """df1 = df.dropna()
+    df = df1.tail(30)
 
-    df = table.tail(lookback)
-
-    # Check for non-numeric values in the entire DataFrame
-    # non_numeric_df = df.apply(pd.to_numeric, errors='coerce')
-    non_numeric_rows = df[df.isna().any(axis=1)]
-
-    # Display rows with non-numeric values
-    print(f'Non numeric rows: {non_numeric_rows}')
-
+    # df = df.tail(lookback)
+    # Convert percentiles to the appropriate format (range [0, 1])
+    # percentiles = np.array(percentiles) / 100
     # Calculate percentiles for each column
-    percentiles = df.quantile([0.25, 0.5, 0.75])
+    df_percentiles = df.quantile(q=percentiles, axis=0)
+    # Create a colormap
+    cmap = LinearSegmentedColormap.from_list('my_cmap', ['green', 'lightgreen', 'white', 'lightcoral', 'red'])
 
-    # Apply color to cells based on percentiles using lambda function
-    styled_df = df.style.apply(lambda row: ['background-color: red' if val < percentiles.loc[0.25, col] else
-                                            'background-color: orange' if val < percentiles.loc[0.5, col] else
-                                            'background-color: lightgreen' if val < percentiles.loc[0.75, col] else
-                                            'background-color: green' for val, col in zip(row, df.columns)], axis=1)
+    # df_styled = df.style.background_gradient(cmap=cmap, subset=df.columns, percentiles=percentiles)
+    # Apply background gradient to the DataFrame based on percentiles
+    # Render Styler as HTML
+    df_styled_html = df.style.apply(lambda x: np.interp(x, df_percentiles.loc[x.name], percentiles), cmap=cmap,
+                                    subset=df.columns).to_html\z()
 
-    # Create a figure and axis with a size matching other plots
+    # Create a new figure and axis for the table
     fig, ax = plt.subplots(figsize=(17, 9))
+    ax.axis('off')  # Turn off axis for the table
 
-    # Plot the table
-    table_ax = plt.table(cellText=df.values,
-                         colLabels=df.columns,
-                         cellLoc='center',
-                         loc='center')
+    # Extract HTML content from Styler
+    cell_text = pd.read_html(df_styled_html, header=0, index_col=0)[0].values
 
-    # Set the font size for better readability
-    table_ax.auto_set_font_size(False)
-    table_ax.set_fontsize(10)
-
-    # Turn off axis for a cleaner appearance
-    ax.axis('off')
+    # Create the table
+    table = ax.table(cellText=cell_text, colLabels=df.columns, loc='center',
+                     cellLoc='center', colColours=['#f0f0f0'] * len(df.columns))
 
     # Add a title above the table
     plt.title('Breadth Percentiles', y=1.1)
     pdf.savefig()
-    plt.close()
+    plt.close()"""
 
 
 ##########################################################################
@@ -1506,6 +1482,7 @@ up_use_dl = get_user_choice()
 lookback = get_lookback()
 from_date = "2000-01-01"
 until_date = download_until()
+print(f'Download until: {until_date}')
 
 # When downloading new, ask for database starting date (from_date). Ask here or it asks for it on each pass
 if up_use_dl == 3:
@@ -1601,4 +1578,4 @@ for nums in mkt_list:
             # Display the result
             # print(nan_check)
 
-            breadth(all_dfs_df)
+            breadth_table(all_dfs_df, rows)
