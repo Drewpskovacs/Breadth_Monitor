@@ -14,7 +14,7 @@ from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 #  from matplotlib.figure import Figure
-#  from matplotlib.table import Table
+from matplotlib.table import Table
 #  from matplotlib.colors import LinearSegmentedColormap
 
 #####################################
@@ -62,8 +62,8 @@ time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 
 # For table
 rows = 20
-percentiles = [0.1, 0.2, 0.8, 0.9]
-
+percentiles = [0, 0.1, 0.2, 0.8, 0.9]
+percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
 
 # -----------------------------FUNCTIONS----------------------------------
 ##########################################################################
@@ -1472,16 +1472,14 @@ def plot_normalized_indexes(mkt_dict, idx):
 ##########################################################################
 # Function to apply color to cells of dataframe
 ##########################################################################
-def breadth_table(df, r):
-
+def get_colors(s):
     global percentiles
-
-    # print(f"Table columns: {df.columns}")
-    # print(f'Table index type: {df.index.dtype}')
-    # print(f"Columns dtypes: {df.dtypes}")
-
-    df = df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
-    df.to_csv('use_for_percentiles.csv')
+    global percentile_color
+    s = s.astype(float).sort_values()
+    return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(),direction='backward')
+            .set_index('Date')['index']
+            .map(lambda x: f'background-color: {percentile_color.get(x, "")}')
+            )
 
 
 ##########################################################################
@@ -1596,4 +1594,19 @@ for nums in mkt_list:
             # Display the result
             # print(nan_check)
 
-            breadth_table(all_dfs_df, rows)
+            df = all_dfs_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
+            # df.to_csv('use_for_percentiles.csv')
+            df.index = df.index.strftime('%d-%m-%y')
+            t1 = df.tail(30)
+
+            # Create a dummy figure
+            plt.figure()
+
+            # Save the styled DataFrame to an HTML file
+            styled_df_html = 'styled_dataframe.html'
+            t1.style.apply(get_colors).set_table_styles(
+                [{'selector': 'td', 'props': [('text-align', 'center')]}])
+
+            # Add the styled DataFrame to the PDF
+            pdf.savefig()
+            plt.close()
