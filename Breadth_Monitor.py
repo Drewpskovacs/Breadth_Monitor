@@ -1599,14 +1599,22 @@ for nums in mkt_list:
             df.index = df.index.strftime('%d-%m-%y')
             t1 = df.tail(30)
 
-            # Create a dummy figure
-            plt.figure()
+            # Convert the DataFrame to a matplotlib table
+            table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+            ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
 
-            # Save the styled DataFrame to an HTML file
-            styled_df_html = 'styled_dataframe.html'
-            t1.style.apply(get_colors).set_table_styles(
-                [{'selector': 'td', 'props': [('text-align', 'center')]}])
+            # Include the datetime index in the column labels
+            table_col_labels = ['Date'] + list(t1.columns[1:])
 
-            # Add the styled DataFrame to the PDF
-            pdf.savefig()
-            plt.close()
+            # Create the table
+            table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+            table.auto_set_font_size(False)  # Set font size manually
+            table.set_fontsize(8)  # Adjust font size as needed
+            table.scale(1, 1.2)  # Adjust table size as needed
+
+            # Remove unnecessary axes details
+            ax.axis('off')
+
+            # Add the table to the PDF
+            pdf.savefig(table_fig)
+            plt.close(table_fig)
