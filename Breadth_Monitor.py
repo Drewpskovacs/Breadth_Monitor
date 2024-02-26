@@ -13,8 +13,9 @@ import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.font_manager as prop
 #  from matplotlib.figure import Figure
-from matplotlib.table import Table
+#  from matplotlib.table import Table
 #  from matplotlib.colors import LinearSegmentedColormap
 
 #####################################
@@ -1447,7 +1448,7 @@ def plot_normalized_indexes(mkt_dict, idx):
     # Set y-axis limits based on the calculated max and min values
 
     # ax1.set_ylim(bottom=min_value, top=max_value)
-    print(p1)
+    # print(p1)
     if not p1.empty:
         max_value = p1.max().max()
         min_value = p1.min().min()
@@ -1470,11 +1471,147 @@ def plot_normalized_indexes(mkt_dict, idx):
 
 
 ##########################################################################
+# Draw highs and lows table
+##########################################################################
+#  def hi_lo_table(full_df):
+def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
+
+    df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
+    df.index = pd.to_datetime(df.index).strftime('%d/%m/%y')
+
+    """# Format 'Adj Close' column to 2 decimal places with thousands separators
+    df = df.copy()
+    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
+
+    # Create a new column for formatted date
+    df['Date'] = df.index.strftime('%d-%m-%y')
+
+    # Rearrange the order of columns with 'Date' as the first column
+    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
+"""
+    # print(df.tail(10))
+    # print(type(df.index))
+    # df.to_csv('use_for_percentiles.csv')
+
+    t1 = df.tail(30)
+
+    # Convert the DataFrame to a matplotlib table
+    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
+
+    table_col_labels = list(t1.columns)
+
+    # Create the table
+    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+    table.scale(1, 1)  # Adjust table size as needed
+
+    # Add title
+    ax.set_title("Highs and Lows", fontsize=12, y=1.02)
+
+    # Remove unnecessary axes details
+    ax.axis('off')
+
+    # Add the table to the PDF
+    pdf.savefig(table_fig)
+    plt.close(table_fig)
+
+
+##########################################################################
+# Draw Stock Bee Primary Breadth Indicators
+##########################################################################
+def stock_b_1_table(full_df):
+
+    df = full_df[['>4%1d', '<4%1d', 'ratio5', 'ratio10', '>25%Q', '<25%Q', 'Adj Close']]
+
+    # Format 'Adj Close' column to 2 decimal places with thousands separators
+    df = df.copy()
+    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
+
+    # Create a new column for formatted date
+    df['Date'] = df.index.strftime('%d-%m-%y')
+
+    # Rearrange the order of columns with 'Date' as the first column
+    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
+
+    # print(df.tail(10))
+    # print(type(df.index))
+    # df.to_csv('use_for_percentiles.csv')
+
+    t1 = df.tail(30)
+
+    # Convert the DataFrame to a matplotlib table
+    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
+
+    table_col_labels = list(t1.columns)
+
+    # Create the table
+    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+    table.scale(1, 1)  # Adjust table size as needed
+
+    # Add title
+    ax.set_title("Stock Bee Primary Breadth Indicators", fontsize=12, y=1.02)
+
+    # Remove unnecessary axes details
+    ax.axis('off')
+
+    # Add the table to the PDF
+    pdf.savefig(table_fig)
+    plt.close(table_fig)
+
+
+##########################################################################
+# Draw Stock Bee Secondary Breadth Indicators
+##########################################################################
+def stock_b_2_table(full_df):
+
+    df = full_df[['>25%M', '<25%M', '>50%M', '<50%M', '>13%34d', '<13%34d', '$>MA40', 'Adj Close']]
+
+    # Format 'Adj Close' column to 2 decimal places with thousands separators
+    df = df.copy()
+    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
+
+    # Create a new column for formatted date
+    df['Date'] = df.index.strftime('%d-%m-%y')
+
+    # Rearrange the order of columns with 'Date' as the first column
+    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
+
+    # print(df.tail(10))
+    # print(type(df.index))
+    # df.to_csv('use_for_percentiles.csv')
+
+    t1 = df.tail(30)
+
+    # Convert the DataFrame to a matplotlib table
+    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
+
+    table_col_labels = list(t1.columns)
+
+    # Create the table
+    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+    table.scale(1, 1)  # Adjust table size as needed
+
+    # Add title
+    ax.set_title("Stock Bee Secondary Breadth Indicators", fontsize=12, y=1.02)
+
+    # Remove unnecessary axes details
+    ax.axis('off')
+
+    # Add the table to the PDF
+    pdf.savefig(table_fig)
+    plt.close(table_fig)
+
+
+##########################################################################
 # Function to apply color to cells of dataframe
 ##########################################################################
-def get_colors(s):
-    global percentiles
-    global percentile_color
+def get_colors(s): #, percentiles=None, percentile_color=None):
+
     s = s.astype(float).sort_values()
     return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(),direction='backward')
             .set_index('Date')['index']
@@ -1498,7 +1635,6 @@ up_use_dl = get_user_choice()
 lookback = get_lookback()
 from_date = "2000-01-01"
 until_date = download_until()
-print(f'Download until: {until_date}')
 
 # When downloading new, ask for database starting date (from_date). Ask here or it asks for it on each pass
 if up_use_dl == 3:
@@ -1508,11 +1644,13 @@ if up_use_dl == 3:
     date_object = datetime.strptime(from_date, "%Y%m%d")
     # Format the datetime object as a string in the desired format
     from_date = date_object.strftime("%Y-%m-%d")
+    print(f'Download until: {until_date}')
     create_databases(mkt_list, from_date, until_date)
 
 # Use existing data
 elif up_use_dl == 1:
     # Perform update
+    print(f'Update until: {until_date}')
     last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
 
 ##########################################################################
@@ -1533,16 +1671,16 @@ for nums in mkt_list:
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
             comp_df = pd.read_csv(f'{data_folder}/EOD_{market_name}.csv', header=[0, 1], index_col=0, parse_dates=True)
 
-            print(f'First and last 3 rows of components df ({market_name}):')
+            # print(f'First and last 3 rows of components df ({market_name}):')
             sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
-            print(sample_mkt)
-            print(f'First and last 3 rows of index df ({idx_code}):')
+            # print(sample_mkt)
+            # print(f'First and last 3 rows of index df ({idx_code}):')
             sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
-            print(sample_idx)
+            # print(sample_idx)
             total_stocks = comp_df.columns.get_level_values(1).nunique()
 
             # Which market will be used for calculations
-            print(f'Using {idx_code} and {market_name}')
+            # print(f'Using {idx_code} and {market_name}')
 
             # with PdfPages(pdf_filename) as pdf:
 
@@ -1586,35 +1724,15 @@ for nums in mkt_list:
             # print(breadth_df.tail(10))
             # print(breadth_df.columns)
             # Select the last 10 rows
-            nan_check = all_dfs_df.tail(10).isna()
-            if nan_check.any().any():
-                print("NaN in last 10 rows")
-            else:
-                print("No NaN in last 10 rows")
+            # nan_check = all_dfs_df.tail(10).isna()
+            # if nan_check.any().any():
+            #     print("NaN in last 10 rows")
+            # else:
+            #     print("No NaN in last 10 rows")
             # Display the result
             # print(nan_check)
 
-            df = all_dfs_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
-            # df.to_csv('use_for_percentiles.csv')
-            df.index = df.index.strftime('%d-%m-%y')
-            t1 = df.tail(30)
-
-            # Convert the DataFrame to a matplotlib table
-            table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
-            ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
-
-            # Include the datetime index in the column labels
-            table_col_labels = ['Date'] + list(t1.columns[1:])
-
-            # Create the table
-            table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
-            table.auto_set_font_size(False)  # Set font size manually
-            table.set_fontsize(8)  # Adjust font size as needed
-            table.scale(1, 1.2)  # Adjust table size as needed
-
-            # Remove unnecessary axes details
-            ax.axis('off')
-
-            # Add the table to the PDF
-            pdf.savefig(table_fig)
-            plt.close(table_fig)
+            # hi_lo_table(all_dfs_df)
+            hi_lo_table(all_dfs_df) #, get_colors)
+            stock_b_1_table(all_dfs_df)
+            stock_b_2_table(all_dfs_df)
