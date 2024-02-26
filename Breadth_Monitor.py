@@ -13,7 +13,7 @@ import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.font_manager as prop
+# import matplotlib.font_manager as prop
 #  from matplotlib.figure import Figure
 #  from matplotlib.table import Table
 #  from matplotlib.colors import LinearSegmentedColormap
@@ -65,6 +65,7 @@ time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 rows = 20
 percentiles = [0, 0.1, 0.2, 0.8, 0.9]
 percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
+
 
 # -----------------------------FUNCTIONS----------------------------------
 ##########################################################################
@@ -1473,7 +1474,7 @@ def plot_normalized_indexes(mkt_dict, idx):
 ##########################################################################
 # Draw highs and lows table
 ##########################################################################
-def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
+def hi_lo_table(full_df):  # get_colors_func, p, p_clr):
 
     df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
     df = df.copy()
@@ -1589,10 +1590,10 @@ def stock_b_table(full_df):
 ##########################################################################
 # Function to apply color to cells of dataframe
 ##########################################################################
-def get_colors(s): #, percentiles=None, percentile_color=None):
+def get_colors(s):
 
     s = s.astype(float).sort_values()
-    return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(),direction='backward')
+    return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(), direction='backward')
             .set_index('Date')['index']
             .map(lambda x: f'background-color: {percentile_color.get(x, "")}')
             )
@@ -1713,5 +1714,3 @@ for nums in mkt_list:
 
             stock_b_table(all_dfs_df)
             hi_lo_table(all_dfs_df)
-
-
