@@ -1477,27 +1477,25 @@ def plot_normalized_indexes(mkt_dict, idx):
 def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
 
     df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
-    df.index = pd.to_datetime(df.index).strftime('%d/%m/%y')
-
-    """# Format 'Adj Close' column to 2 decimal places with thousands separators
     df = df.copy()
-    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
-    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
-
     # Create a new column for formatted date
-    df['Date'] = df.index.strftime('%d-%m-%y')
+    df.loc[:, 'Date'] = df.index.strftime('%d/%m/%y')
 
     # Rearrange the order of columns with 'Date' as the first column
     df = df[['Date'] + [col for col in df.columns if col != 'Date']]
-"""
+
+    # Format 'Adj Close' column to 2 decimal places with thousands separators
+    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
+
     # print(df.tail(10))
     # print(type(df.index))
     # df.to_csv('use_for_percentiles.csv')
 
-    t1 = df.tail(30)
+    t1 = df.tail(42)
 
     # Convert the DataFrame to a matplotlib table
-    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+    table_fig = plt.figure(figsize=(17, 12))  # Adjust figure size as needed
     ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
 
     table_col_labels = list(t1.columns)
@@ -1520,54 +1518,16 @@ def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
 ##########################################################################
 # Draw Stock Bee Primary Breadth Indicators
 ##########################################################################
-def stock_b_1_table(full_df):
+def stock_b_table(full_df):
 
-    df = full_df[['>4%1d', '<4%1d', 'ratio5', 'ratio10', '>25%Q', '<25%Q', 'Adj Close']]
-
-    # Format 'Adj Close' column to 2 decimal places with thousands separators
-    df = df.copy()
-    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
-    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
-
-    # Create a new column for formatted date
-    df['Date'] = df.index.strftime('%d-%m-%y')
-
-    # Rearrange the order of columns with 'Date' as the first column
-    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
-
-    # print(df.tail(10))
-    # print(type(df.index))
-    # df.to_csv('use_for_percentiles.csv')
-
-    t1 = df.tail(30)
-
-    # Convert the DataFrame to a matplotlib table
-    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
-    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
-
-    table_col_labels = list(t1.columns)
-
-    # Create the table
-    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
-    table.scale(1, 1)  # Adjust table size as needed
-
-    # Add title
-    ax.set_title("Stock Bee Primary Breadth Indicators", fontsize=12, y=1.02)
-
-    # Remove unnecessary axes details
-    ax.axis('off')
-
-    # Add the table to the PDF
-    pdf.savefig(table_fig)
-    plt.close(table_fig)
-
-
-##########################################################################
-# Draw Stock Bee Secondary Breadth Indicators
-##########################################################################
-def stock_b_2_table(full_df):
-
-    df = full_df[['>25%M', '<25%M', '>50%M', '<50%M', '>13%34d', '<13%34d', '$>MA40', 'Adj Close']]
+    df = full_df[['>4%1d', '<4%1d',
+                  'ratio5', 'ratio10',
+                  '>25%Q', '<25%Q',
+                  '>25%M', '<25%M',
+                  '>50%M', '<50%M',
+                  '>13%34d', '<13%34d',
+                  '$>MA40',
+                  'Adj Close']]
 
     # Format 'Adj Close' column to 2 decimal places with thousands separators
     df = df.copy()
@@ -1583,10 +1543,11 @@ def stock_b_2_table(full_df):
     # print(df.tail(10))
     # print(type(df.index))
     # df.to_csv('use_for_percentiles.csv')
-    t1 = df.tail(30)
+
+    t1 = df.tail(42)
 
     # Convert the DataFrame to a matplotlib table
-    table_fig = plt.figure(figsize=(17, 9))  # Adjust figure size as needed
+    table_fig = plt.figure(figsize=(17, 12))  # Adjust figure size as needed
     ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
 
     table_col_labels = list(t1.columns)
@@ -1596,7 +1557,7 @@ def stock_b_2_table(full_df):
     table.scale(1, 1)  # Adjust table size as needed
 
     # Add title
-    ax.set_title("Stock Bee Secondary Breadth Indicators", fontsize=12, y=1.02)
+    ax.set_title("Stock Bee Breadth Indicators", fontsize=12, y=1.02)
 
     # Remove unnecessary axes details
     ax.axis('off')
@@ -1604,6 +1565,7 @@ def stock_b_2_table(full_df):
     # Add the table to the PDF
     pdf.savefig(table_fig)
     plt.close(table_fig)
+
 
 
 ##########################################################################
@@ -1731,7 +1693,7 @@ for nums in mkt_list:
             # Display the result
             # print(nan_check)
 
-            # hi_lo_table(all_dfs_df)
-            hi_lo_table(all_dfs_df) #, get_colors)
-            stock_b_1_table(all_dfs_df)
-            stock_b_2_table(all_dfs_df)
+            stock_b_table(all_dfs_df)
+            hi_lo_table(all_dfs_df)
+
+
