@@ -1473,7 +1473,6 @@ def plot_normalized_indexes(mkt_dict, idx):
 ##########################################################################
 # Draw highs and lows table
 ##########################################################################
-#  def hi_lo_table(full_df):
 def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
 
     df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
@@ -1502,6 +1501,17 @@ def hi_lo_table(full_df):  #, get_colors_func, p, p_clr):
 
     # Create the table
     table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+
+    # Make column headers bold
+    for (i, key) in enumerate(table_col_labels):
+        cell = table[0, i]
+        cell.set_fontsize(12)  # Increase font size for column headers
+        cell.set_text_props(weight='bold')  # Make column headers bold
+        cell.set_facecolor('lightgray')  # Set cell background color
+        cell.set_height(0.05)
+
     table.scale(1, 1)  # Adjust table size as needed
 
     # Add title
@@ -1554,18 +1564,26 @@ def stock_b_table(full_df):
 
     # Create the table
     table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
-    table.scale(1, 1)  # Adjust table size as needed
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
 
+    # Make column headers bold
+    for (i, key) in enumerate(table_col_labels):
+        cell = table[0, i]
+        cell.set_fontsize(12)  # Increase font size for column headers
+        cell.set_text_props(weight='bold')  # Make column headers bold
+        cell.set_facecolor('lightgray')  # Set cell background color
+        cell.set_height(0.05)
+
+    table.scale(1, 1)  # Adjust table size as needed
     # Add title
     ax.set_title("Stock Bee Breadth Indicators", fontsize=12, y=1.02)
-
     # Remove unnecessary axes details
     ax.axis('off')
 
     # Add the table to the PDF
     pdf.savefig(table_fig)
     plt.close(table_fig)
-
 
 
 ##########################################################################
