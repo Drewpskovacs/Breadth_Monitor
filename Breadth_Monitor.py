@@ -1583,7 +1583,6 @@ def stock_b_2_table(full_df):
     # print(df.tail(10))
     # print(type(df.index))
     # df.to_csv('use_for_percentiles.csv')
-
     t1 = df.tail(30)
 
     # Convert the DataFrame to a matplotlib table
