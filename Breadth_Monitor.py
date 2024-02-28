@@ -1472,58 +1472,25 @@ def plot_normalized_indexes(mkt_dict, idx):
 
 
 ##########################################################################
-# Draw highs and lows table
+# Function to apply color to cells of dataframe
 ##########################################################################
-def hi_lo_table(full_df):  # get_colors_func, p, p_clr):
+"""def get_colors(s):
 
-    df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
-    df = df.copy()
-    # Create a new column for formatted date
-    df.loc[:, 'Date'] = df.index.strftime('%d/%m/%y')
+    s = s.astype(float).sort_values()
+    return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(), direction='backward')
+            .set_index('Date')['index']
+            .map(lambda x: f'background-color: {percentile_color.get(x, "")}')
+            )"""
 
-    # Rearrange the order of columns with 'Date' as the first column
-    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
+def get_colors(series, percentiles, percentile_color):
 
-    # Format 'Adj Close' column to 2 decimal places with thousands separators
-    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
-    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
-
-    # print(df.tail(10))
-    # print(type(df.index))
-    # df.to_csv('use_for_percentiles.csv')
-
-    t1 = df.tail(42)
-
-    # Convert the DataFrame to a matplotlib table
-    table_fig = plt.figure(figsize=(17, 12))  # Adjust figure size as needed
-    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
-
-    table_col_labels = list(t1.columns)
-
-    # Create the table
-    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-
-    # Make column headers bold
-    for (i, key) in enumerate(table_col_labels):
-        cell = table[0, i]
-        cell.set_fontsize(12)  # Increase font size for column headers
-        cell.set_text_props(weight='bold')  # Make column headers bold
-        cell.set_facecolor('lightgray')  # Set cell background color
-        cell.set_height(0.05)
-
-    table.scale(1, 1)  # Adjust table size as needed
-
-    # Add title
-    ax.set_title("Highs and Lows", fontsize=12, y=1.02)
-
-    # Remove unnecessary axes details
-    ax.axis('off')
-
-    # Add the table to the PDF
-    pdf.savefig(table_fig)
-    plt.close(table_fig)
+    colors= []
+    for value in series.values:
+        for percentile, color in sorted(zip(percentiles, percentile_color.items()), reverse=True):
+            if value <= percentile:
+                colors.append(color)
+                break
+    return colors
 
 
 ##########################################################################
@@ -1558,8 +1525,11 @@ def stock_b_table(full_df):
     t1 = df.tail(42)
 
     # Convert the DataFrame to a matplotlib table
-    table_fig = plt.figure(figsize=(17, 12))  # Adjust figure size as needed
-    ax = table_fig.add_subplot(111, frameon=False)  # Remove frame
+    # table_fig = plt.figure(figsize=(17, 12))  # Adjust figure size as needed
+    fig, ax = plt.subplots(figsize=(17, 12))  # Adjust figure size as needed
+    # ax = fig.add_subplot(111, frameon=False)  # Remove frame
+    # Remove unnecessary axes details
+    ax.axis('off')
 
     table_col_labels = list(t1.columns)
 
@@ -1579,24 +1549,94 @@ def stock_b_table(full_df):
     table.scale(1, 1)  # Adjust table size as needed
     # Add title
     ax.set_title("Stock Bee Breadth Indicators", fontsize=12, y=1.02)
+
+    # Add the table to the PDF
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
+##########################################################################
+# Draw highs and lows table
+##########################################################################
+def hi_lo_table(full_df):  # get_colors_func, p, p_clr):
+
+    df = full_df[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML', 'Adj Close']]
+    df = df.copy()
+    # Create a new column for formatted date
+    df.loc[:, 'Date'] = df.index.strftime('%d/%m/%y')
+
+    # Rearrange the order of columns with 'Date' as the first column
+    df = df[['Date'] + [col for col in df.columns if col != 'Date']]
+
+    # Format 'Adj Close' column to 2 decimal places with thousands separators
+    df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+    df.loc[:, 'Close'] = df['Close'].apply(lambda x: '{:,.2f}'.format(x))
+
+    # print(df.tail(10))
+    # print(type(df.index))
+    # df.to_csv('use_for_percentiles.csv')
+
+    t1 = df.tail(42)
+
+    # Convert the DataFrame to a matplotlib table
+    fig, ax = plt.subplots(figsize=(17, 12))  # Adjust figure size as needed
     # Remove unnecessary axes details
     ax.axis('off')
 
+    # Create the table
+    table_col_labels = list(t1.columns)
+    table = ax.table(cellText=t1.values, colLabels=table_col_labels, loc='center', cellLoc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+
+    # Make column headers bold
+    for (i, key) in enumerate(table_col_labels):
+        cell = table[0, i]
+        cell.set_fontsize(12)  # Increase font size for column headers
+        cell.set_text_props(weight='bold')  # Make column headers bold
+        cell.set_facecolor('lightgray')  # Set cell background color
+        cell.set_height(0.05)
+
+    table.scale(1, 1)  # Adjust table size as needed
+
+    # Add title
+    ax.set_title("Highs and Lows", fontsize=12, y=1.02)
+
     # Add the table to the PDF
-    pdf.savefig(table_fig)
-    plt.close(table_fig)
+    pdf.savefig(fig)
+    plt.close(fig)
 
 
 ##########################################################################
-# Function to apply color to cells of dataframe
+# Plot a table test
 ##########################################################################
-def get_colors(s):
+def plot_table(df_in):
 
-    s = s.astype(float).sort_values()
-    return (pd.merge_asof(s.reset_index(), s.quantile(q=percentiles).reset_index(), direction='backward')
-            .set_index('Date')['index']
-            .map(lambda x: f'background-color: {percentile_color.get(x, "")}')
-            )
+    df = df_in[['>4%1d', '<4%1d',
+                'ratio5', 'ratio10',
+                '>25%Q', '<25%Q',
+                '>25%M', '<25%M',
+                '>50%M', '<50%M',
+                '>13%34d', '<13%34d',
+                '$>MA40',
+                'Adj Close']]
+
+    df.style.apply(get_colors)
+
+    fig, ax = plt.subplots(figsize=(17, 7))
+    ax.axis('off')  # Turn off axis labels and ticks
+
+    table = ax.table(cellText=df.values,
+                     colLabels=df.columns,
+                     cellLoc='center',
+                     loc='center',
+                     colColours=['#f5f5f5'] * len(df.columns)
+                     )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+
+    pdf.savefig(fig)
+    plt.close(fig)
 
 
 ##########################################################################
@@ -1712,5 +1752,10 @@ for nums in mkt_list:
             # Display the result
             # print(nan_check)
 
+            #plot_table(all_dfs_df)
+
+            # hi_lo_table(all_dfs_df.copy(), percentiles, percentile_color)
+
             stock_b_table(all_dfs_df)
             hi_lo_table(all_dfs_df)
+
