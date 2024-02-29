@@ -17,7 +17,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 # Variables - Setup
 #####################################
 
-hoje = datetime.now()  # .strftime("%d-%m-%Y")
+hoje = datetime.now()
 reference_time = 18
 
 # Where files and database are stored (same directory as MAIN PROGRAM)
@@ -416,8 +416,7 @@ def update_databases(market_list):
 
             update_components_data(m_n, com_df)
 
-    # Not sure this is required. Variables used inside function
-    return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
+        return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
 
 ##########################################################################
@@ -437,7 +436,7 @@ def plot_close_and_volume(df_idx, idx):
 
     # Create a figure and axis
     graph_name = f'{idx} - Close and Volume'
-    fig, ax1 = plt.subplots(figsize=(17, 7))
+    fig, ax1 = plt.subplots(figsize=(17, 12))
     # Assuming 'Date' is the index of the DataFrame p1
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
@@ -520,7 +519,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     p1 = p.reset_index().rename(columns={'index': 'Date'})
     pidx = idx_c.tail(lookback)
 
-    fig, ax = plt.subplots(figsize=(17, 7))
+    fig, ax = plt.subplots(figsize=(17, 12))
 
     # Define colors for each level 0 label
     colors = {
@@ -631,7 +630,7 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
     pidx = df_close_idx.tail(lookback)
 
     # Create subplots
-    fig, ax = plt.subplots(figsize=(17, 7))
+    fig, ax = plt.subplots(figsize=(17, 12))
 
     #################################################################################
 
@@ -729,7 +728,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     pidx = df_close_idx.tail(lookback)
 
     # Create subplots
-    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Plot > low MAs on top subplot
@@ -918,7 +917,7 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
 
     pidx = df_close_idx.tail(lookback)
 
-    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     ###################
@@ -1076,8 +1075,7 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # print(date_labels)
     # Create subplots
 
-    # fig, ax = plt.subplots(figsize=(17, 7))
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Plot accumulated volume
@@ -1200,7 +1198,7 @@ def movers(df_close, idx, df_close_idx):
     pidx = df_close_idx.tail(lookback)'''
 
     # Create subplots
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Top subplot POSITIVE MOVERS
@@ -1305,7 +1303,7 @@ def ratios(df4, df13, idx, df_close_idx):
     date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
     pidx = df_close_idx.tail(lookback)
 
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Plotting 5 and 10 day breadth_ratios on the primary y-axis of upper plot
@@ -1405,7 +1403,7 @@ def plot_normalized_indexes(mkt_dict, idx):
         combined_df.index = pd.to_datetime(combined_df.index)
         combined_df.rename(columns={'Adj Close': idx}, inplace=True)
 
-    # print(f'Combined index df:')
+    # print('Combined index df:')
     # print(combined_df.tail(10))
 
     # Plot the normalized data
@@ -1424,7 +1422,7 @@ def plot_normalized_indexes(mkt_dict, idx):
     # min_value = p1.min().min()
 
     # Create a figure and axis
-    fig, ax1 = plt.subplots(figsize=(17, 7))
+    fig, ax1 = plt.subplots(figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Define a set of distinct colors and linestyles
@@ -1467,36 +1465,45 @@ def plot_normalized_indexes(mkt_dict, idx):
 
 
 ##########################################################################
-# Plot a table test
+# Plot a table
 ##########################################################################
-def plot_table(csv):
+def plot_table(csv, plot_title):
 
     df = pd.read_csv(csv, index_col=0, header=0)
     # Round all numbers in the DataFrame to two decimal places
     df = df.round(2)
-    print('Raw tail of df:')
-    print(df.tail(10))
+    # print('Raw tail of df:')
+    # print(df.tail(10))
 
     # Remove nan and inf
     max_val = df.apply(lambda df_col: df_col[df_col != np.inf].max())
+    minimum_value = df.min()
+    maximum_value = df.max()
+
+    """print('min vals:')
+    print(minimum_value)
+    print('max vals:')
+    print(maximum_value)
+
     print('max_val')
     print(type(max_val))
-    print(max_val)
+    print(max_val)"""
+
     # Replace inf values with the corresponding max value in each column
-    for column in df.columns:
-        df[column].replace([np.inf], max_val[column], inplace=True)
+    for col in df.columns:
+        df[col].replace([np.inf], max_val[col], inplace=True)
     # Replace remaining NaN values with 0
     df.fillna(0, inplace=True)
 
     # print('Cleaned df.tail=')
     # print(df.tail(30))
-    print(f'Contains NaN/inf: {df.isnull().values.any() or np.isinf(df.values).any()}')
+    # print(f'Contains NaN/inf: {df.isnull().values.any() or np.isinf(df.values).any()}')
 
     # Step 2: Calculate quantiles for each column
     # quantiles = df.quantile([0.25, 0.5, 0.75])
 
     # Display only tail 30 rows of the DataFrame
-    df = df.tail(30)
+    df = df.tail(54)
     # Reverse the order of rows in the DataFrame to put latest a th
     df = df.iloc[::-1]
 
@@ -1505,7 +1512,8 @@ def plot_table(csv):
     print('Percentiles:')
     print(unique_percentiles_rounded)'''
 
-    fig, ax = plt.subplots(figsize=(17, 7))
+    fig, ax = plt.subplots(figsize=(17, 12))
+    plt.title(plot_title, fontsize=16, fontweight='bold')
     ax.axis('off')
 
     cell_colors = plt.cm.RdYlGn(df.rank(pct=True).values.reshape(df.shape[0], df.shape[1]))
@@ -1637,15 +1645,21 @@ for nums in mkt_list:
             # Display the result
             # print(nan_check)
             stockbee_df = all_dfs_df[['>4%1d', '<4%1d',
-                            'ratio5', 'ratio10',
-                            '>25%Q', '<25%Q',
-                            '>25%M', '<25%M',
-                            '>50%M', '<50%M',
-                            '>13%34d', '<13%34d',
-                            '$>MA40',
-                            'Adj Close']]
+                                      'ratio5', 'ratio10',
+                                      '>25%Q', '<25%Q',
+                                      '>25%M', '<25%M',
+                                      '>50%M', '<50%M',
+                                      '>13%34d', '<13%34d',
+                                      '$>MA40',
+                                      'Adj Close']]
+            # Negate columns so that the percentile colours are inverted
+            columns_to_negate = ['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']
+            for column in columns_to_negate:
+                stockbee_df.loc[:, column] = -stockbee_df[column]
+
+            print(stockbee_df.tail(20))
             stockbee_df.to_csv('stockbee_df.csv')
-            plot_table('stockbee_df.csv')
+            plot_table('stockbee_df.csv', 'Breadth Monitor')
 
             hilo_df = all_dfs_df[['ATH', 'ATL',
                                   '12MH', '12ML',
@@ -1653,6 +1667,4 @@ for nums in mkt_list:
                                   '1MH', '1ML',
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
-            plot_table('hilo_df.csv')
-
-
+            plot_table('hilo_df.csv', 'Highs and Lows')
