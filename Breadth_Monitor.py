@@ -6,20 +6,18 @@ Created on Tue Jan  2 16:29:34 2024
 """
 import pandas as pd
 from datetime import datetime, timedelta
-# import os
 import sys
 import yfinance as yf
 import numpy as np
+from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from itertools import cycle
-# import seaborn as sns
 
 #####################################
 # Variables - Setup
 #####################################
 
-hoje = datetime.now()  # .strftime("%d-%m-%Y")
+hoje = datetime.now()
 reference_time = 18
 
 # Where files and database are stored (same directory as MAIN PROGRAM)
@@ -43,9 +41,9 @@ yahoo_idx_components_dictionary = {
     11: {'idx_code': 'ZN=F', 'market': '10yrTnote', 'codes_csv': 'none'},
     12: {'idx_code': 'ZT=F', 'market': '2yrTnote', 'codes_csv': 'none'},
     13: {'idx_code': '^VIX', 'market': 'vix', 'codes_csv': 'none'},
-    14: {'idx_code': 'IDIV.SA', 'market': 'dividends', 'codes_csv': 'none'},
-    15: {'idx_code': 'IFIX.SA', 'market': 'fii', 'codes_csv': 'none'},
-    16: {'idx_code': '^IBX50', 'market': 'ibx50', 'codes_csv': 'none'}
+    14: {'idx_code': '^IBX50', 'market': 'ibx50', 'codes_csv': 'none'}
+    # 15: {'idx_code': 'IFIX.SA', 'market': 'fii', 'codes_csv': 'none'},
+    # 16: {'idx_code': 'IDIV.SA', 'market': 'dividends', 'codes_csv': 'none'},
 }
 
 compare_index_list = [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
@@ -54,19 +52,17 @@ compare_index_list = [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
 filtered_index_dict = {key: {'idx_code': value['idx_code'], 'market': value['market']}
                        for key, value in yahoo_idx_components_dictionary.items() if key in compare_index_list}
 
-#####################################
 # Variables for breadth and plots
-#####################################
-
 mas_to_use = [1, 5, 12, 25, 40, 50, 100, 200]  # Moving average: 1 is used as 'Close'
 time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 
+# For table
+rows = 20
+percentiles = [0, 0.1, 0.2, 0.8, 0.9]
+percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
 
-##########################################################################
+
 # -----------------------------FUNCTIONS----------------------------------
-##########################################################################
-
-
 ##########################################################################
 # Work with all indices or choose one
 ##########################################################################
@@ -131,27 +127,24 @@ def download_until():
 
     # 0: Mon, 1: Tue, 2: Wed, 3: Thur, 4: Fri, 5: Sat, 6: Sun
     if hoje.weekday() in {5, 6}:  # Weekend, download up to Friday
-        end_download_on = hoje - timedelta(days=(hoje.weekday() % 5 + 1))  # % = remainder
+        dl_until = hoje - timedelta(days=(hoje.weekday() % 5 + 1))  # % = remainder
 
     # If weekday and market still open, data unavailable for today, use yesterday
     elif datetime.now().hour < reference_time:
-        end_download_on = datetime.today() - timedelta(days=1)
+        dl_until = datetime.today() - timedelta(days=1)
 
     # If weekday and market closed, use today
     else:
-        end_download_on = datetime.today()
+        dl_until = datetime.today()
 
     # print(f'New data will be downloaded until: {end_download_on.strftime("%A, %d %B %Y")}')
 
-    return end_download_on
+    return dl_until
 
 
 ##################################################################################
 # Download historical data for the defined period for all tickers in selected market
 ##################################################################################
-# takes:
-#       codes_list  from setup_market()
-#       fromdate, uptodate from setup_dates()
 def download_components_data(mkt, ticker_list, first, last):
     # Download historical data for chosen market components
 
@@ -168,8 +161,6 @@ def download_components_data(mkt, ticker_list, first, last):
     components_df_file_saved = f'{data_folder}/EOD_{mkt}.csv'
 
     print(f"Downloaded and saved: {components_df_file_saved}")
-
-    return components_df
 
 
 ##########################################################################
@@ -195,16 +186,30 @@ def download_index_data(index_code, first, last):
 # Create all (or chosen) databases
 ##########################################################################
 def create_databases(market_list, start, end):
+
+    global yahoo_idx_components_dictionary
+
     print('Will overwrite any existing files.')
+
+    # all_markets = [key for key in yahoo_idx_components_dictionary.keys()]
+
+    # Always need to download ALL indexes
+    for number in yahoo_idx_components_dictionary:
+        mkt_details = yahoo_idx_components_dictionary[number]
+        # Files to be used
+        i_c = mkt_details['idx_code']
+        # m_n = mkt_details['market']
+        # tikrs = mkt_details['codes_csv']
+        # Download and save index data
+        download_index_data(i_c, start, end)
+
+    # Only download component data from SELECTED index or ALL
     for number in market_list:
         mkt_details = market_list[number]
         # Files to be used
-        i_c = mkt_details['idx_code']
+        # i_c = mkt_details['idx_code']
         m_n = mkt_details['market']
         tikrs = mkt_details['codes_csv']
-        # Download and save index data
-        download_index_data(i_c, start, end)
-        # Download and save components data (where there is a list of tickers for that market)
         if tikrs != 'none':
             # First make dataframe of codes
             t_df = pd.read_csv(f'{codes_folder}/{tikrs}')
@@ -253,142 +258,165 @@ def has_nan(idx, eod, mkt):
 ##########################################################################
 # Update and save selected market components
 ##########################################################################
-def update_components_data(mkt):
+def update_components_data(mkt, df):
     global data_folder
     global codes_folder
     global hoje
     global reference_time
     global until_date
 
-    updated_components = None
-
+    # updated_components = None
     # Read existing eod/components csv for update
-    component_csv = f'{data_folder}/EOD_{mkt}.csv'
-    # Extract list of codes: tickers_list
-    tickers_list = pd.read_csv(component_csv, index_col=0, header=[0, 1]).columns.get_level_values(
-        1).unique().tolist()
-    # Get current eod data: components_df
-    components_df = pd.read_csv(component_csv, index_col=0, header=[0, 1])
-    components_df.index = pd.to_datetime(components_df.index)
-    # Remove Duplicate Index Labels (if any)
-    components_df = components_df[~components_df.index.duplicated(keep='first')]
+    component_file = f'{data_folder}/EOD_{mkt}.csv'
+
+    # Extract list of codes from data csv
+    tickers_list = df.columns.get_level_values(1).unique().tolist()
+
     # Get last available date in dataframe
-    last_date = components_df.index[-1]
-    # Check last available day not today
-    if until_date <= last_date:
-        print(f"{mkt} not updated. Last date <= today")
-        return updated_components  # GPT says to make sure to return something meaningful
-    else:
-        print(f'Last date in csv: {last_date.strftime("%A %d %B %Y")}')
-        print(f'Updated until: {until_date}')
-        print(f'Time now: {datetime.now().strftime("%H:%M")}')
-        # Collect missing days
-        start_update_on = components_df.index[-1] + timedelta(days=1)
+    last_date_in_csv = df.index[-1]
+
+    # If download until date is SAME as last date in csv: do nothing
+    if until_date.date() == last_date_in_csv.date():
+        print(f"{mkt} update not required. Last date in file is today")
+        # return updated_components  # Return NONE: GPT says to make sure to return something meaningful
+
+    # If download until date is AFTER last date in csv: update
+    elif until_date.date() > last_date_in_csv.date():
+        # Download missing days
+        start_update_on = last_date_in_csv + timedelta(days=1)
         missing_days_df = yf.download(tickers_list, start=start_update_on, end=until_date, rounding=True)
         # Convert the indexes to DateTimeIndex
         missing_days_df.index = pd.to_datetime(missing_days_df.index)
-        print(f'Downloaded recent data for {mkt}.')
+        print(f'Downloaded {mkt} from {last_date_in_csv.strftime("%A, %d %B %y")}'
+              f' to {until_date.strftime("%A, %d %B %y")}')
         # Join update to original
-        updated_components = pd.concat([components_df, missing_days_df], axis=0).loc[
-            ~pd.concat([components_df, missing_days_df], axis=0).index.duplicated(keep='first')]
+        updated_components = pd.concat([df, missing_days_df], axis=0).loc[
+            ~pd.concat([df, missing_days_df], axis=0).index.duplicated(keep='first')]
         # Check for Duplicate Indexes:
         print(f'Duplicated indexes = {updated_components.index.duplicated().any()}')
         # Get last date with data
-        updated_until = updated_components.index[-1].strftime("%A %d %B %y")
+        updated_until = updated_components.index[-1].strftime("%A, %d %B %y")
         # Save and check components file as csv
-        updated_components.to_csv(component_csv)
+        updated_components.to_csv(component_file)
         if not updated_components.tail(10).isnull().values.any():
-            print(f'{mkt} seems OK, updated until: {updated_until}. Filename= {component_csv}')
+            print(f'{mkt} updated until: {updated_until}. Filename= {component_file}')
         else:
-            print(f'{mkt} has NaN in added lines. Check update.')
+            print(f'{mkt} updated with NaN. Check update.')
 
-    return updated_components
+    else:  # start_update_on AFTER until_date
+        print(f'Error: {mkt} start date after end date')
+        #  return updated_idx  # GPT says to make sure to return something meaningful
 
 
 ##########################################################################
 # Update and save selected index data
 ##########################################################################
-def update_index_data(idx):
+def update_index_data(idx, df):
     global data_folder
     global codes_folder
     global hoje
     global reference_time
     global until_date
 
-    updated_idx = None
-
-    # Read existing index file for update: idx_data_df
+    # updated_idx = None
     idx_file = f'{data_folder}/INDEX_{idx}.csv'
-    index_df = pd.read_csv(idx_file, header=0, index_col=0)
-    index_df.index = pd.to_datetime(index_df.index)
-    # Remove Duplicate Index Labels (if any)
-    index_df = index_df[~index_df.index.duplicated(keep='first')]
 
-    # Check the last idx volume is zero. If so, drop last row (and update for that day)
-    last_volume_in_idx = index_df['Volume'].iloc[-1]
-    if last_volume_in_idx == 0:
-        # (Yahoo seems to be a day late with volume on indexes)
-        day_with_zero_volume = index_df.index[-1]
-        print(f'File has zero volume on last day. Dropping {day_with_zero_volume}')
-        # Remove the (last) row with zero volume in both files
-        index_df = index_df.drop(day_with_zero_volume)
-        # Start update on day with zero volume (Yahoo seems to be a day late)
-        start_update_on = index_df.index[-1]
+    # Yahoo seems to be a day late with volume on indexes so...
+    # ...if last volume is zero: drop, download and rewrite last row.
+    if df['Volume'].iloc[-1] == 0:
+        df = df.drop(df.index[-1])
+        print(f'{df.index[-1]} has zero volume. Dropping row and re-updating')
+        start_update_on = df.index[-1]
     else:
-        # start update on day after last day in file
-        start_update_on = index_df.index[-1] + timedelta(days=1)
+        # Last row has volume, start update on day after last row
+        start_update_on = df.index[-1] + timedelta(days=1)
 
-    # Checking last day not today
-    if until_date <= start_update_on:
-        print('Not updated: end update on  <= start update on')
-        return updated_idx  # GPT says to make sure to return something meaningful
+    # If last day in df = update until date, no need to update
+    if until_date.date() == start_update_on.date():
+        print('No need to update')
+        #  return updated_idx  # GPT says to make sure to return something meaningful
 
-    else:
-        print(f'Last date in file: {start_update_on.strftime("%A %d %B %y")}')
-        print(f'Updated until: {until_date}')
-        print(f'Time now: {datetime.now().strftime("%H:%M")}')
-        # Collect missing days
-        missing_days = yf.download(idx_code, start=start_update_on, end=until_date, rounding=True)
+    elif start_update_on.date() < until_date.date():
+        print(f'Last date in {idx} file: {start_update_on.strftime("%A, %d %B %y")}')
+        print(f'Update {idx} until: {until_date.strftime("%A, %d %B %y")}')
+        # Download missing days
+        missing_days = yf.download(idx, start=start_update_on, end=until_date, rounding=True)
         # Convert the indexes to DateTimeIndex
         missing_days.index = pd.to_datetime(missing_days.index)
-        print(f'Downloaded recent data for {idx_code}.')
         # Join update to original
-        updated_idx = pd.concat([index_df, missing_days], axis=0).loc[
-            ~pd.concat([index_df, missing_days], axis=0).index.duplicated(keep='first')]
+        updated_idx = pd.concat([df, missing_days], axis=0).loc[
+            ~pd.concat([df, missing_days], axis=0).index.duplicated(keep='first')]
         # Check for Duplicate Indexes:
         print(f'Duplicated indexes = {updated_idx.index.duplicated().any()}')
         # Get last date with data
         updated_until = updated_idx.index[-1].strftime("%A %d %B %y")
         # Check and save index file as csv
+        updated_idx.to_csv(idx_file)
         if not updated_idx.tail(10).isnull().values.any():
-            updated_idx.to_csv(idx_file)
-            print(f'{idx_code} seems OK, updated until: {updated_until}. Filename= {idx_file}')
+            print(f'{idx} updated until: {updated_until}. Filename= {idx_file}')
         else:
-            print('{idx_code} has NaN in added lines. Check update.')
-
-    return updated_idx
+            print(f'{idx} updated with NaN. Check update.')
+    else:  # start_update_on AFTER until_date
+        print(f'Error: {idx} start date after end date')
+        #  return updated_idx  # GPT says to make sure to return something meaningful
 
 
 ##########################################################################
 # Update all (or chosen) databases
 ##########################################################################
 def update_databases(market_list):
+
+    global yahoo_idx_components_dictionary
+
+    # Initialize before the loop to stop "Local variable 'x' might be referenced before assignment"
+    last_date_in_comp_csv = None
+    com_df = None
+    last_date_in_ind_csv = None
+    ind_df = None
+
+    # all_markets = [key for key in yahoo_idx_components_dictionary.keys()]
+
+    # Always need to update ALL indexes
+    for number in yahoo_idx_components_dictionary:
+        mkt_details = yahoo_idx_components_dictionary[number]
+        # Files to be used
+        i_c = mkt_details['idx_code']
+        # m_n = mkt_details['market']
+        # tikrs = mkt_details['codes_csv']
+
+        # Read existing index file for update: idx_data_df
+        idx_file = f'{data_folder}/INDEX_{i_c}.csv'
+        ind_df = pd.read_csv(idx_file, header=0, index_col=0)
+        ind_df.index = pd.to_datetime(ind_df.index)
+        # Remove Duplicate Index Labels (if any)
+        ind_df = ind_df[~ind_df.index.duplicated(keep='first')]
+        # last_date_in_ind_csv = ind_df.index[-1]
+
+        update_index_data(i_c, ind_df)
+
+    # Only update component data from SELECTED index or ALL
     for number in market_list:
         mkt_details = market_list[number]
         # Files to be used
-        i_c = mkt_details['idx_code']
+        # i_c = mkt_details['idx_code']
         m_n = mkt_details['market']
         tikrs = mkt_details['codes_csv']
 
-        update_index_data(i_c)
         # Update components data (where there is a list of tickers for that market)
         if tikrs != 'none':
-            # First make dataframe of codes
-            # t_df = pd.read_csv(f'{codes_folder}/{tikrs}')
-            # Next make the list for yahoo download
-            # t_list = t_df['Code'].tolist()  # codes_csv must have column "Code"
-            # Use list to download components data
-            update_components_data(m_n)
+            # Read existing eod/components csv for update
+            component_csv = f'{data_folder}/EOD_{m_n}.csv'
+            # Get current eod data: components_df
+            com_df = pd.read_csv(component_csv, index_col=0, header=[0, 1])
+            com_df.index = pd.to_datetime(com_df.index)
+            # Remove Duplicate Index Labels (if any)
+            com_df = com_df[~com_df.index.duplicated(keep='first')]
+
+            # last_date_in_comp_csv = com_df.index[-1]
+
+            update_components_data(m_n, com_df)
+
+        return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
 
 ##########################################################################
@@ -408,7 +436,7 @@ def plot_close_and_volume(df_idx, idx):
 
     # Create a figure and axis
     graph_name = f'{idx} - Close and Volume'
-    fig, ax1 = plt.subplots(figsize=(17, 7))
+    fig, ax1 = plt.subplots(figsize=(17, 12))
     # Assuming 'Date' is the index of the DataFrame p1
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
@@ -491,7 +519,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     p1 = p.reset_index().rename(columns={'index': 'Date'})
     pidx = idx_c.tail(lookback)
 
-    fig, ax = plt.subplots(figsize=(17, 7))
+    fig, ax = plt.subplots(figsize=(17, 12))
 
     # Define colors for each level 0 label
     colors = {
@@ -602,7 +630,7 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
     pidx = df_close_idx.tail(lookback)
 
     # Create subplots
-    fig, ax = plt.subplots(figsize=(17, 7))
+    fig, ax = plt.subplots(figsize=(17, 12))
 
     #################################################################################
 
@@ -700,7 +728,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     pidx = df_close_idx.tail(lookback)
 
     # Create subplots
-    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Plot > low MAs on top subplot
@@ -889,7 +917,7 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
 
     pidx = df_close_idx.tail(lookback)
 
-    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     ###################
@@ -1047,8 +1075,7 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # print(date_labels)
     # Create subplots
 
-    # fig, ax = plt.subplots(figsize=(17, 7))
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Plot accumulated volume
@@ -1171,7 +1198,7 @@ def movers(df_close, idx, df_close_idx):
     pidx = df_close_idx.tail(lookback)'''
 
     # Create subplots
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Top subplot POSITIVE MOVERS
@@ -1276,7 +1303,7 @@ def ratios(df4, df13, idx, df_close_idx):
     date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
     pidx = df_close_idx.tail(lookback)
 
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 9))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Plotting 5 and 10 day breadth_ratios on the primary y-axis of upper plot
@@ -1351,13 +1378,16 @@ def plot_normalized_indexes(mkt_dict, idx):
     # Extract 'idx_code' values from the filtered dictionary
     idx_code_list = [value['idx_code'] for value in mkt_dict.values()]
 
-    # Specify the reference ('^BVSP') CSV file
+    """# Specify the reference ('^BVSP') CSV file
     ref_csv_file = f"{data_folder}/INDEX_{idx}.csv"
 
     # Read the reference CSV file to get the 'Adj Close' column
     combined_df = pd.read_csv(ref_csv_file, usecols=['Date', 'Adj Close'], index_col='Date', parse_dates=True)
     combined_df.index = pd.to_datetime(combined_df.index)
-    combined_df.rename(columns={'Adj Close': idx}, inplace=True)
+    combined_df.rename(columns={'Adj Close': idx}, inplace=True)"""
+
+    # Initialize combined_df before the loop
+    combined_df = pd.DataFrame()
 
     # Iterate through all_idx_codes
     for code in idx_code_list:
@@ -1370,19 +1400,29 @@ def plot_normalized_indexes(mkt_dict, idx):
 
         # Concatenate the 'Adj Close' column to the combined DataFrame
         combined_df = pd.concat([combined_df, adj_close_col], axis=1, sort=True)
+        combined_df.index = pd.to_datetime(combined_df.index)
+        combined_df.rename(columns={'Adj Close': idx}, inplace=True)
+
+    # print('Combined index df:')
+    # print(combined_df.tail(10))
 
     # Plot the normalized data
     p = combined_df.tail(lookback)
+    # Remove nan (bitcoin)
+    pp = p.dropna()
     # Rebase p
-    pp = p / p.iloc[0]
-    p1 = pp.dropna()
+    p1 = pp / pp.iloc[0]
+
+    # Checks cos of "ValueError: Axis limits cannot be NaN or Inf"
+    # print(f'Check {idx_code} for NaN {p1.isnull().sum().sum()}')  # Check for NaN
+    # print(f'Check {idx_code} for Inf {np.isinf(p1).sum().sum()}')  # Check for Inf
 
     # Calculate the maximum and minimum values in the DataFrame columns
-    max_value = p1.max().max()
-    min_value = p1.min().min()
+    # max_value = p1.max().max()
+    # min_value = p1.min().min()
 
     # Create a figure and axis
-    fig, ax1 = plt.subplots(figsize=(17, 7))
+    fig, ax1 = plt.subplots(figsize=(17, 12))
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Define a set of distinct colors and linestyles
@@ -1400,7 +1440,16 @@ def plot_normalized_indexes(mkt_dict, idx):
     ax1.set_ylabel('Normalised Close', color='black')
     ax1.tick_params(axis='y')
     # Set y-axis limits based on the calculated max and min values
-    ax1.set_ylim(bottom=min_value, top=max_value)
+
+    # ax1.set_ylim(bottom=min_value, top=max_value)
+    # print(p1)
+    if not p1.empty:
+        max_value = p1.max().max()
+        min_value = p1.min().min()
+        # Set y-axis limits based on the calculated max and min values
+        ax1.set_ylim(bottom=min_value, top=max_value)
+    else:
+        print(f"{idx_code} dataFrame is empty. Skipping setting y-axis limits.")
 
     # Set x-ticks and x-tick labels for first y-axis
     # ax1.set_xlabel('Date', color='blue')
@@ -1416,76 +1465,69 @@ def plot_normalized_indexes(mkt_dict, idx):
 
 
 ##########################################################################
-# Function to apply color to cells of dataframe
+# Plot a table
 ##########################################################################
+def plot_table(csv, plot_title):
 
-def breadth(table):
-    global lookback
+    df = pd.read_csv(csv, index_col=0, header=0)
+    # Round all numbers in the DataFrame to two decimal places
+    df = df.round(2)
+    # print('Raw tail of df:')
+    # print(df.tail(10))
 
-    print(f"Table columns: {table.columns}")
-    print(f'Table index type: {table.index.dtype}')
-    print(f"Columns dtypes: {table.dtypes}")
-    """
-    DATAFRAMES
-    high_low_df,
-    over_short_mas_pct,
-    over_40ma_pct,
-    over_long_mas_pct,
-    mvrs_sum,
-    br_ratios,
-    adr_df,
-    idx_df,
-    acc_vol_df
+    # Remove nan and inf
+    max_val = df.apply(lambda df_col: df_col[df_col != np.inf].max())
+    minimum_value = df.min()
+    maximum_value = df.max()
 
-    COLUMN NAMES
-    'Date'
-    'ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML'
-    '$>MA5', '$>MA12', '$>MA25', '$>MA40', '$>MA50', '$>MA100', '$>MA200'
-    '>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d', '<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d'
-    'ratio5', 'ratio10', 'tftdr'
-    'adv_dec_ratio'
-    'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
-    'CumVol'
-    """
+    """print('min vals:')
+    print(minimum_value)
+    print('max vals:')
+    print(maximum_value)
 
-    table = table[['ATH', 'ATL', '12MH', '12ML', '3MH', '3ML', '1MH', '1ML']]
+    print('max_val')
+    print(type(max_val))
+    print(max_val)"""
 
-    df = table.tail(lookback)
+    # Replace inf values with the corresponding max value in each column
+    for col in df.columns:
+        df[col].replace([np.inf], max_val[col], inplace=True)
+    # Replace remaining NaN values with 0
+    df.fillna(0, inplace=True)
 
-    # Check for non-numeric values in the entire DataFrame
-    # non_numeric_df = df.apply(pd.to_numeric, errors='coerce')
-    non_numeric_rows = df[df.isna().any(axis=1)]
+    # print('Cleaned df.tail=')
+    # print(df.tail(30))
+    # print(f'Contains NaN/inf: {df.isnull().values.any() or np.isinf(df.values).any()}')
 
-    # Display rows with non-numeric values
-    print(f'Non numeric rows: {non_numeric_rows}')
+    # Step 2: Calculate quantiles for each column
+    # quantiles = df.quantile([0.25, 0.5, 0.75])
 
-    # Calculate percentiles for each column
-    percentiles = df.quantile([0.25, 0.5, 0.75])
+    # Display only tail 30 rows of the DataFrame
+    df = df.tail(54)
+    # Reverse the order of rows in the DataFrame to put latest a th
+    df = df.iloc[::-1]
 
-    # Apply color to cells based on percentiles using lambda function
-    styled_df = df.style.apply(lambda row: ['background-color: red' if val < percentiles.loc[0.25, col] else
-                                            'background-color: orange' if val < percentiles.loc[0.5, col] else
-                                            'background-color: lightgreen' if val < percentiles.loc[0.75, col] else
-                                            'background-color: green' for val, col in zip(row, df.columns)], axis=1)
+    '''unique_percentiles = df.rank(pct=True).values.flatten()
+    unique_percentiles_rounded = set(round(p, 2) for p in unique_percentiles)
+    print('Percentiles:')
+    print(unique_percentiles_rounded)'''
 
-    # Create a figure and axis with a size matching other plots
-    fig, ax = plt.subplots(figsize=(17, 9))
-
-    # Plot the table
-    table_ax = plt.table(cellText=df.values,
-                         colLabels=df.columns,
-                         cellLoc='center',
-                         loc='center')
-
-    # Set the font size for better readability
-    table_ax.auto_set_font_size(False)
-    table_ax.set_fontsize(10)
-
-    # Turn off axis for a cleaner appearance
+    fig, ax = plt.subplots(figsize=(17, 12))
+    plt.title(plot_title, fontsize=16, fontweight='bold')
     ax.axis('off')
 
-    # Add a title above the table
-    plt.title('Breadth Percentiles', y=1.1)
+    cell_colors = plt.cm.RdYlGn(df.rank(pct=True).values.reshape(df.shape[0], df.shape[1]))
+
+    tbl = ax.table(cellText=df.values,
+                   colLabels=df.columns,
+                   rowLabels=df.index,  # Format the index as day/month/year
+                   loc='center',
+                   cellColours=cell_colors)
+
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1, 1)
+
     pdf.savefig()
     plt.close()
 
@@ -1515,12 +1557,14 @@ if up_use_dl == 3:
     date_object = datetime.strptime(from_date, "%Y%m%d")
     # Format the datetime object as a string in the desired format
     from_date = date_object.strftime("%Y-%m-%d")
+    print(f'Download until: {until_date}')
     create_databases(mkt_list, from_date, until_date)
 
 # Use existing data
 elif up_use_dl == 1:
     # Perform update
-    update_databases(mkt_list)
+    print(f'Update until: {until_date}')
+    last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
 
 ##########################################################################
 # -----------------BREADTH AND INDICATORS------------------------
@@ -1540,16 +1584,16 @@ for nums in mkt_list:
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
             comp_df = pd.read_csv(f'{data_folder}/EOD_{market_name}.csv', header=[0, 1], index_col=0, parse_dates=True)
 
-            print(f'First and last 3 rows of components df ({market_name}):')
+            # print(f'First and last 3 rows of components df ({market_name}):')
             sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
-            print(sample_mkt)
-            print(f'First and last 3 rows of index df ({idx_code}):')
+            # print(sample_mkt)
+            # print(f'First and last 3 rows of index df ({idx_code}):')
             sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
-            print(sample_idx)
+            # print(sample_idx)
             total_stocks = comp_df.columns.get_level_values(1).nunique()
 
             # Which market will be used for calculations
-            print(f'Using {idx_code} and {market_name}')
+            # print(f'Using {idx_code} and {market_name}')
 
             # with PdfPages(pdf_filename) as pdf:
 
@@ -1593,12 +1637,34 @@ for nums in mkt_list:
             # print(breadth_df.tail(10))
             # print(breadth_df.columns)
             # Select the last 10 rows
-            nan_check = all_dfs_df.tail(10).isna()
-            if nan_check.any().any():
-                print("NaN in last 10 rows")
-            else:
-                print("No NaN in last 10 rows")
+            # nan_check = all_dfs_df.tail(10).isna()
+            # if nan_check.any().any():
+            #     print("NaN in last 10 rows")
+            # else:
+            #     print("No NaN in last 10 rows")
             # Display the result
             # print(nan_check)
+            stockbee_df = all_dfs_df[['>4%1d', '<4%1d',
+                                      'ratio5', 'ratio10',
+                                      '>25%Q', '<25%Q',
+                                      '>25%M', '<25%M',
+                                      '>50%M', '<50%M',
+                                      '>13%34d', '<13%34d',
+                                      '$>MA40',
+                                      'Adj Close']]
+            # Negate columns so that the percentile colours are inverted
+            columns_to_negate = ['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']
+            for column in columns_to_negate:
+                stockbee_df.loc[:, column] = -stockbee_df[column]
 
-            breadth(all_dfs_df)
+            print(stockbee_df.tail(20))
+            stockbee_df.to_csv('stockbee_df.csv')
+            plot_table('stockbee_df.csv', 'Breadth Monitor')
+
+            hilo_df = all_dfs_df[['ATH', 'ATL',
+                                  '12MH', '12ML',
+                                  '3MH', '3ML',
+                                  '1MH', '1ML',
+                                  'Adj Close']]
+            hilo_df.to_csv('hilo_df.csv')
+            plot_table('hilo_df.csv', 'Highs and Lows')
