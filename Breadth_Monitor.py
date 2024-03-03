@@ -1578,7 +1578,8 @@ for nums in mkt_list:
     tickers = market_details['codes_csv']
 
     if tickers != 'none':
-        pdf_filename = f'{pdf_folder}/{idx_code}_{datetime.today().strftime("%Y-%m-%d")}.pdf'
+        # pdf_filename = f'{pdf_folder}/{idx_code}_{datetime.today().strftime("%Y-%m-%d")}.pdf'
+        pdf_filename = f'{pdf_folder}/{idx_code}.pdf'
         with PdfPages(pdf_filename) as pdf:
             #  This is required because we are in a new loop and idx/eod_df are undefined
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
