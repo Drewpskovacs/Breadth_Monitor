@@ -1469,25 +1469,18 @@ def plot_normalized_indexes(mkt_dict, idx):
 ##########################################################################
 def plot_table(csv, plot_title):
 
+    rows_on_page = 54
+    selection_for_ranking = 300
+
     df = pd.read_csv(csv, index_col=0, header=0)
     # Round all numbers in the DataFrame to two decimal places
     df = df.round(2)
     # print('Raw tail of df:')
     # print(df.tail(10))
+    # print(df.shape)
 
     # Remove nan and inf
     max_val = df.apply(lambda df_col: df_col[df_col != np.inf].max())
-    minimum_value = df.min()
-    maximum_value = df.max()
-
-    """print('min vals:')
-    print(minimum_value)
-    print('max vals:')
-    print(maximum_value)
-
-    print('max_val')
-    print(type(max_val))
-    print(max_val)"""
 
     # Replace inf values with the corresponding max value in each column
     for col in df.columns:
@@ -1495,24 +1488,11 @@ def plot_table(csv, plot_title):
     # Replace remaining NaN values with 0
     df.fillna(0, inplace=True)
 
-    # print('Cleaned df.tail=')
-    # print(df.tail(30))
-    # print(f'Contains NaN/inf: {df.isnull().values.any() or np.isinf(df.values).any()}')
+    # Select the tail size to get the best ranking.
+    df = df.tail(selection_for_ranking)
+    # df = df.iloc[::-1]
 
-    # Step 2: Calculate quantiles for each column
-    # quantiles = df.quantile([0.25, 0.5, 0.75])
-
-    # Display only tail 30 rows of the DataFrame
-    df = df.tail(54)
-    # Reverse the order of rows in the DataFrame to put latest a th
-    df = df.iloc[::-1]
-
-    '''unique_percentiles = df.rank(pct=True).values.flatten()
-    unique_percentiles_rounded = set(round(p, 2) for p in unique_percentiles)
-    print('Percentiles:')
-    print(unique_percentiles_rounded)'''
-
-    fig, ax = plt.subplots(figsize=(17, 12))
+    """fig, ax = plt.subplots(figsize=(17, 12))
     plt.title(plot_title, fontsize=16, fontweight='bold')
     ax.axis('off')
 
@@ -1521,6 +1501,27 @@ def plot_table(csv, plot_title):
     tbl = ax.table(cellText=df.values,
                    colLabels=df.columns,
                    rowLabels=df.index,  # Format the index as day/month/year
+                   loc='center',
+                   cellColours=cell_colors)"""
+
+    # Calculate percentile ranks based on the entire DataFrame
+    rank_df = df.rank(pct=True)
+    # print('Rank df shape:')
+    # print(df.shape)
+
+    # Select only the last 54 rows
+    df_to_plot = df.tail(rows_on_page)
+
+    fig, ax = plt.subplots(figsize=(17, 12))
+    plt.title(plot_title, fontsize=16, fontweight='bold')
+    ax.axis('off')
+
+    # Use the calculated ranks for the entire DataFrame
+    cell_colors = plt.cm.RdYlGn(rank_df.tail(rows_on_page).values.reshape(df_to_plot.shape[0], df_to_plot.shape[1]))
+
+    tbl = ax.table(cellText=df_to_plot.values,
+                   colLabels=df_to_plot.columns,
+                   rowLabels=df_to_plot.index,
                    loc='center',
                    cellColours=cell_colors)
 
@@ -1578,7 +1579,8 @@ for nums in mkt_list:
     tickers = market_details['codes_csv']
 
     if tickers != 'none':
-        pdf_filename = f'{pdf_folder}/{idx_code}_{datetime.today().strftime("%Y-%m-%d")}.pdf'
+        # pdf_filename = f'{pdf_folder}/{idx_code}_{datetime.today().strftime("%Y-%m-%d")}.pdf'
+        pdf_filename = f'{pdf_folder}/{idx_code}.pdf'
         with PdfPages(pdf_filename) as pdf:
             #  This is required because we are in a new loop and idx/eod_df are undefined
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
@@ -1657,7 +1659,7 @@ for nums in mkt_list:
             for column in columns_to_negate:
                 stockbee_df.loc[:, column] = -stockbee_df[column]
 
-            print(stockbee_df.tail(20))
+            # print(stockbee_df.tail(20))
             stockbee_df.to_csv('stockbee_df.csv')
             plot_table('stockbee_df.csv', 'Breadth Monitor')
 
