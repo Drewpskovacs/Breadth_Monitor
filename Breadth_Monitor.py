@@ -1071,7 +1071,8 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # print(p1['Date'])
     pidx = df_close_idx.tail(lookback)
 
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    date_labels = p1.index.tolist()
     # print(date_labels)
     # Create subplots
 
@@ -1423,7 +1424,8 @@ def plot_normalized_indexes(mkt_dict, idx):
 
     # Create a figure and axis
     fig, ax1 = plt.subplots(figsize=(17, 12))
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    date_labels = p1.index.tolist()
 
     # Define a set of distinct colors and linestyles
     lines = ['-', '--', '-.', ':']
