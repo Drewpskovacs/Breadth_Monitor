@@ -12,17 +12,13 @@ import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 
 #####################################
 # Variables - Setup
 #####################################
 
 hoje = datetime.now()
-market_is_closed_time = 20
+reference_time = 18
 
 # Where files and database are stored (same directory as MAIN PROGRAM)
 data_folder = 'Data/Data_files'
@@ -52,7 +48,7 @@ yahoo_idx_components_dictionary = {
 
 compare_index_list = [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13]
 
-# Create a new dictionary using dictionary comprehension. Used in comparative plot
+# Create a new dictionary using dictionary comprehension
 filtered_index_dict = {key: {'idx_code': value['idx_code'], 'market': value['market']}
                        for key, value in yahoo_idx_components_dictionary.items() if key in compare_index_list}
 
@@ -62,8 +58,8 @@ time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 
 # For table
 rows = 20
-# percentiles = [0, 0.1, 0.2, 0.8, 0.9]
-# percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
+percentiles = [0, 0.1, 0.2, 0.8, 0.9]
+percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
 
 
 # -----------------------------FUNCTIONS----------------------------------
@@ -127,17 +123,20 @@ def get_lookback():
 ##########################################################################
 def download_until():
     global hoje
-    global market_is_closed_time
+    global reference_time
 
     # 0: Mon, 1: Tue, 2: Wed, 3: Thur, 4: Fri, 5: Sat, 6: Sun
     if hoje.weekday() in {5, 6}:  # Weekend, download up to Friday
         dl_until = hoje - timedelta(days=(hoje.weekday() % 5 + 1))  # % = remainder
+
     # If weekday and market still open, data unavailable for today, use yesterday
-    elif datetime.now().hour < market_is_closed_time:
+    elif datetime.now().hour < reference_time:
         dl_until = datetime.today() - timedelta(days=1)
+
     # If weekday and market closed, use today
     else:
         dl_until = datetime.today()
+
     # print(f'New data will be downloaded until: {end_download_on.strftime("%A, %d %B %Y")}')
 
     return dl_until
@@ -263,7 +262,7 @@ def update_components_data(mkt, df):
     global data_folder
     global codes_folder
     global hoje
-    global market_is_closed_time
+    global reference_time
     global until_date
 
     # updated_components = None
@@ -316,7 +315,7 @@ def update_index_data(idx, df):
     global data_folder
     global codes_folder
     global hoje
-    global market_is_closed_time
+    global reference_time
     global until_date
 
     # updated_idx = None
@@ -326,18 +325,18 @@ def update_index_data(idx, df):
     # ...if last volume is zero: drop, download and rewrite last row.
     if df['Volume'].iloc[-1] == 0:
         df = df.drop(df.index[-1])
-        print(f'{idx}: {df.index[-1]} has zero volume. Dropping row and re-updating')
+        print(f'{df.index[-1]} has zero volume. Dropping row and re-updating')
         start_update_on = df.index[-1]
     else:
         # Last row has volume, start update on day after last row
         start_update_on = df.index[-1] + timedelta(days=1)
 
     # If last day in df = update until date, no need to update
-    if until_date.date() == df.index[-1].date():  # start_update_on.date():
-        print(f'No need to update {idx}')
+    if until_date.date() == start_update_on.date():
+        print('No need to update')
         #  return updated_idx  # GPT says to make sure to return something meaningful
 
-    elif until_date.date() > df.index[-1].date():  # start_update_on.date():
+    elif start_update_on.date() < until_date.date():
         print(f'Last date in {idx} file: {start_update_on.strftime("%A, %d %B %y")}')
         print(f'Update {idx} until: {until_date.strftime("%A, %d %B %y")}')
         # Download missing days
@@ -348,7 +347,7 @@ def update_index_data(idx, df):
         updated_idx = pd.concat([df, missing_days], axis=0).loc[
             ~pd.concat([df, missing_days], axis=0).index.duplicated(keep='first')]
         # Check for Duplicate Indexes:
-        print(f'{idx}: Duplicated indexes = {updated_idx.index.duplicated().any()}')
+        print(f'Duplicated indexes = {updated_idx.index.duplicated().any()}')
         # Get last date with data
         updated_until = updated_idx.index[-1].strftime("%A %d %B %y")
         # Check and save index file as csv
@@ -375,10 +374,15 @@ def update_databases(market_list):
     last_date_in_ind_csv = None
     ind_df = None
 
-    # Always need to update ALL indexes, so use yahoo_idx_components_dictionary for codes
+    # all_markets = [key for key in yahoo_idx_components_dictionary.keys()]
+
+    # Always need to update ALL indexes
     for number in yahoo_idx_components_dictionary:
         mkt_details = yahoo_idx_components_dictionary[number]
+        # Files to be used
         i_c = mkt_details['idx_code']
+        # m_n = mkt_details['market']
+        # tikrs = mkt_details['codes_csv']
 
         # Read existing index file for update: idx_data_df
         idx_file = f'{data_folder}/INDEX_{i_c}.csv'
@@ -388,17 +392,15 @@ def update_databases(market_list):
         ind_df = ind_df[~ind_df.index.duplicated(keep='first')]
         # last_date_in_ind_csv = ind_df.index[-1]
 
-        #  UPDATE INDEX
         update_index_data(i_c, ind_df)
 
     # Only update component data from SELECTED index or ALL
-    print(f'market_list = {market_list}')
     for number in market_list:
         mkt_details = market_list[number]
+        # Files to be used
+        # i_c = mkt_details['idx_code']
         m_n = mkt_details['market']
         tikrs = mkt_details['codes_csv']
-
-        print(f'Market = {m_n}')
 
         # Update components data (where there is a list of tickers for that market)
         if tikrs != 'none':
@@ -411,10 +413,10 @@ def update_databases(market_list):
             com_df = com_df[~com_df.index.duplicated(keep='first')]
 
             # last_date_in_comp_csv = com_df.index[-1]
-            print(f'About to update {m_n} components data')
+
             update_components_data(m_n, com_df)
 
-    return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
+        return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
 
 ##########################################################################
@@ -1069,8 +1071,7 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # print(p1['Date'])
     pidx = df_close_idx.tail(lookback)
 
-    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
-    date_labels = p1.index.tolist()
+    date_labels = p1.index.strftime("%d/%m/%y").tolist()
     # print(date_labels)
     # Create subplots
 
@@ -1143,29 +1144,11 @@ def movers(df_close, idx, df_close_idx):
     global lookback
 
     # print(df_idx.tail(lookback))
-    # print(f'df_close type: {type(df_close)}') # ==Dataframe
+
     # Fill NaN values in the DataFrame before calculating percentage changes
-    df_filled = df_close.fillna(method='bfill')
-
-    # df_filled = df_close.bfill()
-    # df_filled = df_close.ffill()
-    # print(f'df_filled type: {type(df_filled)}')
-
-    """if df_filled.isnull().any():
-        print(f'{idx}: DF has NaN values')"""
+    df_filled = df_close.ffill()
 
     # Define the conditions
-    """c4plus = df_filled.pct_change(fill_method=None, limit=None) >= 0.04
-    c4minus = df_filled.pct_change(fill_method=None, limit=None) <= -0.04
-    c25_3plus = df_filled.pct_change(periods=63, fill_method=None, limit=None) >= 0.25
-    c25_3minus = df_filled.pct_change(periods=63, fill_method=None, limit=None) <= -0.25
-    c25_1plus = df_filled.pct_change(periods=21, fill_method=None, limit=None) >= 0.25
-    c25_1minus = df_filled.pct_change(periods=21, fill_method=None, limit=None) <= -0.25
-    c50_1plus = df_filled.pct_change(periods=21, fill_method=None, limit=None) >= 0.50
-    c50_1minus = df_filled.pct_change(periods=21, fill_method=None, limit=None) <= -0.50
-    c13_34plus = df_filled.pct_change(periods=34, fill_method=None, limit=None) >= 0.13
-    c13_34minus = df_filled.pct_change(periods=34, fill_method=None, limit=None) <= -0.13"""
-
     c4plus = df_filled.pct_change() >= 0.04
     c4minus = df_filled.pct_change() <= -0.04
     c25_3plus = df_filled.pct_change(periods=63) >= 0.25
@@ -1440,8 +1423,7 @@ def plot_normalized_indexes(mkt_dict, idx):
 
     # Create a figure and axis
     fig, ax1 = plt.subplots(figsize=(17, 12))
-    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
-    date_labels = p1.index.tolist()
+    date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Define a set of distinct colors and linestyles
     lines = ['-', '--', '-.', ':']
@@ -1559,7 +1541,6 @@ def plot_table(csv, plot_title):
 
 # Work with all indices or just one?
 mkt_list = get_market_map(yahoo_idx_components_dictionary)
-print(f'Market list: {mkt_list}')
 
 # What do you want to do? Update, use or download new data?
 up_use_dl = get_user_choice()
@@ -1584,8 +1565,8 @@ if up_use_dl == 3:
 elif up_use_dl == 1:
     # Perform update
     print(f'Update until: {until_date}')
-    # last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
-    update_databases(mkt_list)
+    last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
+
 ##########################################################################
 # -----------------BREADTH AND INDICATORS------------------------
 ##########################################################################
@@ -1689,30 +1670,3 @@ for nums in mkt_list:
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
             plot_table('hilo_df.csv', 'Highs and Lows')
-
-            """# Email details
-            from_email = "andyspythonstuff@gmail.com"
-            to_email = "asmith2212@gmail.com"
-            subject = "Breadth PDF"
-
-            # Create the message
-            message = MIMEMultipart()
-            message["From"] = from_email
-            message["To"] = to_email
-            message["Subject"] = subject
-
-            # Attach the body of the message
-            body = "Here is the PDF file attached"
-            message.attach(MIMEText(body, "plain"))
-
-            # Open the PDF file and attach it
-            with open(pdf_filename, "rb") as attachment:
-               pdf = MIMEApplication(attachment.read(), _subtype="pdf")
-               pdf.add_header("Content-Disposition", "attachment", filename=pdf_filename)
-               message.attach(pdf)
-
-            smtp = smtplib.SMTP("smtp.gmail.com", 587)
-            smtp.starttls()
-            smtp.login(from_email, "Andy5Pyth0n5tuff")
-            smtp.sendmail(from_email, to_email, message.as_string())
-            smtp.quit()"""
