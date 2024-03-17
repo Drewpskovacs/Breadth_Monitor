@@ -374,8 +374,6 @@ def update_databases(market_list):
     last_date_in_ind_csv = None
     ind_df = None
 
-    # all_markets = [key for key in yahoo_idx_components_dictionary.keys()]
-
     # Always need to update ALL indexes
     for number in yahoo_idx_components_dictionary:
         mkt_details = yahoo_idx_components_dictionary[number]
@@ -391,7 +389,7 @@ def update_databases(market_list):
         # Remove Duplicate Index Labels (if any)
         ind_df = ind_df[~ind_df.index.duplicated(keep='first')]
         # last_date_in_ind_csv = ind_df.index[-1]
-
+        print(f'Updating index: {i_c}')
         update_index_data(i_c, ind_df)
 
     # Only update component data from SELECTED index or ALL
@@ -401,7 +399,7 @@ def update_databases(market_list):
         # i_c = mkt_details['idx_code']
         m_n = mkt_details['market']
         tikrs = mkt_details['codes_csv']
-
+        print(f'Trying to update: {m_n}')
         # Update components data (where there is a list of tickers for that market)
         if tikrs != 'none':
             # Read existing eod/components csv for update
@@ -413,8 +411,11 @@ def update_databases(market_list):
             com_df = com_df[~com_df.index.duplicated(keep='first')]
 
             # last_date_in_comp_csv = com_df.index[-1]
-
+            print(f'Updating components: {m_n}')
             update_components_data(m_n, com_df)
+        else:
+            print(f'No components to update for {m_n}')
+
 
         return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
@@ -1075,33 +1076,34 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # print(date_labels)
     # Create subplots
 
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
+    # fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
+    fig, ax1 = plt.subplots(figsize=(17, 12))
 
     #############################################################################
     # Plot accumulated volume
     #############################################################################
 
-    axs[0].bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels[::5], rotation=45, ha='right')
+    ax1.bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
+    ax1.set_xticks(p1.index[::5])
+    ax1.set_xticklabels(date_labels[::5], rotation=45, ha='right')
     # axs[0].set_xlabel('Date')
-    axs[0].set_ylabel('Accumulated Volume', color='black')
+    ax1.set_ylabel('Accumulated Volume', color='black')
 
     # Set y-axis limits to the range of accumulated volume
-    axs[0].set_ylim(bottom=min(p1['CumVol']), top=max(p1['CumVol']))
+    ax1.set_ylim(bottom=min(p1['CumVol']), top=max(p1['CumVol']))
 
     # Plot index
-    axs0_twin = axs[0].twinx()
+    ax1_twin = ax1.twinx()
 
     # ax1.plot(pidx.index, pidx, 'black', label=idx)
-    axs0_twin.plot(p1.index, pidx, 'black', label=idx)
-    axs0_twin.set_ylabel(idx, color='black')
+    ax1_twin.plot(p1.index, pidx, 'black', label=idx)
+    ax1_twin.set_ylabel(idx, color='black')
 
-    lines, labels = axs[0].get_legend_handles_labels()
-    lines2, labels2 = axs0_twin.get_legend_handles_labels()
-    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax1_twin.get_legend_handles_labels()
+    ax1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
 
-    #############################################################################
+    """#############################################################################
     # Plot difference close % - accumulated volume %
     #############################################################################
     axs[1].bar(p2.index, p2, width=1, color='goldenrod', alpha=0.7, label='Close % change minus CumVol % change')
@@ -1125,7 +1127,7 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
 
     lines, labels = axs[0].get_legend_handles_labels()
     lines2, labels2 = axs0_twin.get_legend_handles_labels()
-    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')"""
 
     # Adjust layout
     # plt.savefig(f'{plots_folder}/{idx}_cum_vol.jpg')
