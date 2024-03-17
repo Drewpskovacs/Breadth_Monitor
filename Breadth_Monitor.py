@@ -433,13 +433,13 @@ def plot_close_and_volume(df_idx, idx):
     # print(f'Type df_idx = {type(df_idx)}')
     # print('This is df_idx:')
     # print(df_idx)
-    p1 = df_idx.tail(lookback)
+    p_1 = df_idx.tail(lookback)
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index(drop=True)
 
     # Create a figure and axis
     graph_name = f'{idx} - Close and Volume'
     fig, ax1 = plt.subplots(figsize=(17, 12))
-    # Assuming 'Date' is the index of the DataFrame p1
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
 
     # Plot closing price on the first y-axis
     ax1.set_ylabel('Close', color='blue')
@@ -626,8 +626,9 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
     #############################################################################
     # p = diff_df.reset_index().rename(columns={'index': 'Date'})
     # p1 = p.tail(lookback)
-    p1 = diff_df.tail(lookback)
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    p = diff_df.tail(lookback)
+    date_labels = p.index.strftime("%d/%m/%y").tolist()
+    p1 = p.reset_index().rename(columns={'index': 'Date'})
     pidx = df_close_idx.tail(lookback)
 
     # Create subplots
@@ -637,8 +638,9 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
 
     # Create a stacked bar chart
     bottom = None
+    to_plot = p1.columns[1:]  # Ignore 'Date'
     # for col in p1.columns[1:]:
-    for col in p1.columns:
+    for col in to_plot:
         ax.bar(p1.index, p1[col], label=col, bottom=bottom)
         if bottom is None:
             bottom = p1[col]
@@ -723,14 +725,22 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     # PLOTTING
     #############################################################################
 
-    p1 = over_low_mas_sum_pct.tail(lookback)
-    p2 = over_mid_ma_sum_pct.tail(lookback)
-    p3 = over_high_mas_sum_pct.tail(lookback)
-    pidx = df_close_idx.tail(lookback)
+    p_1 = over_low_mas_sum_pct.tail(lookback)
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index(drop=True)
+
+    p_2 = over_mid_ma_sum_pct.tail(lookback)
+    p2 = p_2.reset_index(drop=True)
+
+    p_3 = over_high_mas_sum_pct.tail(lookback)
+    p3 = p_3.reset_index(drop=True)
+
+    p_idx = df_close_idx.tail(lookback)
+    pidx = p_idx.reset_index(drop=True)
 
     # Create subplots
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+
 
     # Plot > low MAs on top subplot
     #################################################################################
@@ -909,17 +919,23 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     #############################################################################
     # PLOTTING
     #############################################################################
-    p1 = adv_dec_ratio.tail(lookback)
+    p_1 = adv_dec_ratio.tail(lookback)
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index(drop=True)
     # p2 = dec_adv_ratio.tail(lookback)
     # p3 = adv_dec_breadth.tail(lookback)
     # p4 = adv_dec_daily.tail(lookback)
-    p5 = adv_dec_cum_diff.tail(lookback)
-    p6 = df['McClellan_Oscillator'].tail(lookback)
+    p_5 = adv_dec_cum_diff.tail(lookback)
+    p5 = p_5.reset_index(drop=True)
 
-    pidx = df_close_idx.tail(lookback)
+    p_6 = df['McClellan_Oscillator'].tail(lookback)
+    p6 = p_6.reset_index(drop=True)
+
+    p_idx = df_close_idx.tail(lookback)
+    pidx = p_idx.reset_index(drop=True)
 
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+
 
     ###################
     # Plot A/D ratio vs Close
@@ -1067,12 +1083,14 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # PLOTTING
     #############################################################################
 
-    p1 = cum_vol_df.tail(lookback)
-    p2 = diff.tail(lookback)
-    # print(p1['Date'])
+    #p1 = cum_vol_df.tail(lookback)
+    p = cum_vol_df.tail(lookback)
+    date_labels = p.index.strftime("%d/%m/%y").tolist()
+    p1 = p.reset_index().rename(columns={'index': 'Date'})
+
     pidx = df_close_idx.tail(lookback)
 
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
     # print(date_labels)
     # Create subplots
 
@@ -1086,8 +1104,9 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     ax1.bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
     ax1.set_xticks(p1.index[::5])
     ax1.set_xticklabels(date_labels[::5], rotation=45, ha='right')
-    # axs[0].set_xlabel('Date')
     ax1.set_ylabel('Accumulated Volume', color='black')
+
+    ax1.set_title("Cumulative Volume")
 
     # Set y-axis limits to the range of accumulated volume
     ax1.set_ylim(bottom=min(p1['CumVol']), top=max(p1['CumVol']))
@@ -1103,34 +1122,7 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     lines2, labels2 = ax1_twin.get_legend_handles_labels()
     ax1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
 
-    """#############################################################################
-    # Plot difference close % - accumulated volume %
-    #############################################################################
-    axs[1].bar(p2.index, p2, width=1, color='goldenrod', alpha=0.7, label='Close % change minus CumVol % change')
-    axs[1].set_xticks(p2.index[::5])
-    axs[1].set_xticklabels(date_labels[::5], rotation=45, ha='right')
-    # axs[1].set_xlabel('Date')
-    axs[1].set_ylabel('Close % chg - CumVol % chg', color='black')
-
-    # Set y-axis limits to the range of accumulated volume, checking for NaN or Inf
-    bottom_limit = min(p2.replace([np.inf, -np.inf], np.nan).dropna())
-    top_limit = max(p2.replace([np.inf, -np.inf], np.nan).dropna())
-
-    axs[1].set_ylim(bottom=bottom_limit, top=top_limit)
-
-    # Plot index
-    axs1_twin = axs[1].twinx()
-
-    # ax1.plot(pidx.index, pidx, 'black', label=idx)
-    axs1_twin.plot(p2.index, pidx, 'black', label=idx)
-    axs1_twin.set_ylabel(idx, color='black')
-
-    lines, labels = axs[0].get_legend_handles_labels()
-    lines2, labels2 = axs0_twin.get_legend_handles_labels()
-    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')"""
-
     # Adjust layout
-    # plt.savefig(f'{plots_folder}/{idx}_cum_vol.jpg')
     plt.tight_layout()
     # plt.show(block=False)
     pdf.savefig()
@@ -1188,9 +1180,13 @@ def movers(df_close, idx, df_close_idx):
     #############################################################################
 
     p = breadth_df_summed.tail(lookback)
-    p1 = p[['>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d']]
-    p2 = p[['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']].tail(lookback)
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    p_1 = p[['>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d']]
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index().rename(columns={'index': 'Date'})
+
+    p_2 = p[['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']].tail(lookback)
+    p2 = p_2.reset_index().rename(columns={'index': 'Date'})
+
     pidx = df_close_idx.tail(lookback)
 
     '''p = breadth_df_summed.reset_index().rename(columns={'index': 'Date'})
@@ -1208,8 +1204,9 @@ def movers(df_close, idx, df_close_idx):
 
     # Create a stacked bar chart
     bottom = None
+    to_plot = p1.columns[1:]
     # for col in p1.columns[1:]:
-    for col in p1.columns:
+    for col in to_plot:
         axs[0].bar(p1.index, p1[col], label=col, bottom=bottom)
         if bottom is None:
             bottom = p1[col]
@@ -1242,7 +1239,9 @@ def movers(df_close, idx, df_close_idx):
 
     # Create a stacked bar chart
     bottom = None
-    for col in p2.columns:
+    to_plot = p2.columns[1:]
+
+    for col in to_plot:
         # for col in p2.columns[1:]:
         axs[1].bar(p2.index, -p2[col], label=col, bottom=bottom)
         if bottom is None:
@@ -1413,7 +1412,9 @@ def plot_normalized_indexes(mkt_dict, idx):
     # Remove nan (bitcoin)
     pp = p.dropna()
     # Rebase p
-    p1 = pp / pp.iloc[0]
+    p_1 = pp / pp.iloc[0]
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index(drop=True)
 
     # Checks cos of "ValueError: Axis limits cannot be NaN or Inf"
     # print(f'Check {idx_code} for NaN {p1.isnull().sum().sum()}')  # Check for NaN
@@ -1425,7 +1426,7 @@ def plot_normalized_indexes(mkt_dict, idx):
 
     # Create a figure and axis
     fig, ax1 = plt.subplots(figsize=(17, 12))
-    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+
 
     # Define a set of distinct colors and linestyles
     lines = ['-', '--', '-.', ':']
