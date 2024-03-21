@@ -416,7 +416,6 @@ def update_databases(market_list):
         else:
             print(f'No components to update for {m_n}')
 
-
         return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
 
@@ -741,7 +740,6 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     # Create subplots
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
 
-
     # Plot > low MAs on top subplot
     #################################################################################
 
@@ -936,7 +934,6 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
 
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(17, 12))
 
-
     ###################
     # Plot A/D ratio vs Close
     ###################
@@ -1055,72 +1052,84 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     cum_vol = dir_vol.sum(axis=1).cumsum().rename('CumVol')  # series
     cum_vol_df = pd.DataFrame(cum_vol)  # This is a dataframe
 
-    '''print('cum_vol_df')
-    print(type(cum_vol_df))
-    print(cum_vol_df.columns)
-    print(cum_vol_df.index)
-    print(cum_vol_df.tail(3))'''
-
-    # Calculate the percent difference between consecutive entries in cum_vol_df
-    cum_vol_pct_diff = cum_vol_df['CumVol'].pct_change().mul(100)  # This is a series
-    '''print('cum_vol_pct_diff')
-    print(type(cum_vol_pct_diff))
-    print(cum_vol_pct_diff.tail(3))'''
-
-    # Calculate the percent difference between consecutive entries in df_close
-    close_pct_diff = df_close_idx.pct_change().mul(100)  # This is a series
-    '''print('close_pct_diff')
-    print(type(close_pct_diff))
-    print(close_pct_diff.tail(3))'''
-
-    diff = (close_pct_diff - cum_vol_pct_diff)  # This is a series
-    '''print('diff')
-    print(type(diff))
-    print(diff.describe())
-    print(diff.tail(3))'''
+    # Calculate the percent difference between markets entire volume
+    total_mkt_vol = df_vol.sum(axis=1).rename('MktVol')
+    mkt_vol_pct_chg_1 = total_mkt_vol.pct_change().mul(100)  # series
+    mkt_vol_pct_chg = pd.DataFrame(mkt_vol_pct_chg_1)
+    # print(mkt_vol_pct_chg.columns)
 
     #############################################################################
     # PLOTTING
     #############################################################################
 
-    #p1 = cum_vol_df.tail(lookback)
+    # p1 = cum_vol_df.tail(lookback)
     p = cum_vol_df.tail(lookback)
-    date_labels = p.index.strftime("%d/%m/%y").tolist()
-    p1 = p.reset_index().rename(columns={'index': 'Date'})
+    date_labels_accv = p.index.strftime("%d/%m/%y").tolist()
+    p1 = p.reset_index(drop=True)
 
-    pidx = df_close_idx.tail(lookback)
+    p_2 = mkt_vol_pct_chg.tail(lookback)
+    date_labels_vpct = p_2.index.strftime("%d/%m/%y").tolist()
+    # date_labels_vpct = p_2.index.tolist()
+    p2 = p_2.reset_index(drop=True)
+    # Backfill NaN values in p2['Vol%chg']
+    p2['MktVol'] = p2['MktVol'].fillna(method='backfill')
 
-    # date_labels = p1.index.strftime("%d/%m/%y").tolist()
-    # print(date_labels)
+    p_idx = df_close_idx.tail(lookback)
+    pidx = p_idx.reset_index(drop=True)
+
     # Create subplots
-
-    # fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
-    fig, ax1 = plt.subplots(figsize=(17, 12))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
 
     #############################################################################
     # Plot accumulated volume
     #############################################################################
 
-    ax1.bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
-    ax1.set_xticks(p1.index[::5])
-    ax1.set_xticklabels(date_labels[::5], rotation=45, ha='right')
-    ax1.set_ylabel('Accumulated Volume', color='black')
+    axs[0].bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
+    axs[0].set_xticks(p1.index[::5])
+    axs[0].set_xticklabels(date_labels_accv[::5], rotation=45, ha='right')
+    axs[0].set_ylabel('Accumulated Volume', color='black')
 
-    ax1.set_title("Cumulative Volume")
+    axs[0].set_title("Accumulated Volume")
 
     # Set y-axis limits to the range of accumulated volume
-    ax1.set_ylim(bottom=min(p1['CumVol']), top=max(p1['CumVol']))
+    axs[0].set_ylim(bottom=min(p1['CumVol']), top=max(p1['CumVol']))
 
     # Plot index
-    ax1_twin = ax1.twinx()
+    axs0_twin = axs[0].twinx()  # ax1.twinx()
 
     # ax1.plot(pidx.index, pidx, 'black', label=idx)
-    ax1_twin.plot(p1.index, pidx, 'black', label=idx)
-    ax1_twin.set_ylabel(idx, color='black')
+    axs0_twin.plot(p1.index, pidx, 'black', label=idx)
+    axs0_twin.set_ylabel(idx, color='black')
 
-    lines, labels = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax1_twin.get_legend_handles_labels()
-    ax1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+    lines, labels = axs[0].get_legend_handles_labels()  # ax1.get_legend_handles_labels()
+    lines2, labels2 = axs0_twin.get_legend_handles_labels()
+    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+
+    #############################################################################
+    # Plot difference vol %
+    #############################################################################
+    axs[1].bar(p2.index, p2['MktVol'], width=1, color='goldenrod', alpha=0.7, label='Vol % change')
+    axs[1].set_xticks(p2.index[::5])
+    axs[1].set_xticklabels(date_labels_vpct[::5], rotation=45, ha='right')
+    axs[1].set_ylabel('Vol % change', color='black')
+
+    """# Check if p2['Vol%chg'] is not empty
+    if not p2['Vol%chg'].empty:
+        # Set y-axis limits
+        axs[1].set_ylim(bottom=min(p2['Vol%chg']), top=max(p2['Vol%chg']))"""
+
+    axs[1].set_title("Day to day % volume change")
+
+    # Plot index
+    axs1_twin = axs[1].twinx()
+
+    # ax1.plot(pidx.index, pidx, 'black', label=idx)
+    axs1_twin.plot(p2.index, pidx, 'black', label=idx)
+    axs1_twin.set_ylabel(idx, color='black')
+
+    lines, labels = axs[1].get_legend_handles_labels()
+    lines2, labels2 = axs1_twin.get_legend_handles_labels()
+    axs1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
 
     # Adjust layout
     plt.tight_layout()
@@ -1426,7 +1435,6 @@ def plot_normalized_indexes(mkt_dict, idx):
 
     # Create a figure and axis
     fig, ax1 = plt.subplots(figsize=(17, 12))
-
 
     # Define a set of distinct colors and linestyles
     lines = ['-', '--', '-.', ':']
