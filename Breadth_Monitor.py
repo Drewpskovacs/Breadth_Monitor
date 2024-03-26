@@ -416,7 +416,7 @@ def update_databases(market_list):
         else:
             print(f'No components to update for {m_n}')
 
-        return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
+    return last_date_in_comp_csv, com_df, last_date_in_ind_csv, ind_df
 
 
 ##########################################################################
@@ -1502,18 +1502,6 @@ def plot_table(csv, plot_title):
     # Select the tail size to get the best ranking.
     df = df.tail(selection_for_ranking)
     # df = df.iloc[::-1]
-
-    """fig, ax = plt.subplots(figsize=(17, 12))
-    plt.title(plot_title, fontsize=16, fontweight='bold')
-    ax.axis('off')
-
-    cell_colors = plt.cm.RdYlGn(df.rank(pct=True).values.reshape(df.shape[0], df.shape[1]))
-
-    tbl = ax.table(cellText=df.values,
-                   colLabels=df.columns,
-                   rowLabels=df.index,  # Format the index as day/month/year
-                   loc='center',
-                   cellColours=cell_colors)"""
 
     # Calculate percentile ranks based on the entire DataFrame
     rank_df = df.rank(pct=True)
