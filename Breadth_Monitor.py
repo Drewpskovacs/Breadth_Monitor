@@ -30,7 +30,7 @@ market_monitor_folder = 'Data/Mkt_Monitor'
 yahoo_idx_components_dictionary = {
     1: {'idx_code': '^BVSP', 'market': 'bovespa', 'codes_csv': 'IBOV.csv'},
     2: {'idx_code': '^IXIC', 'market': 'nasdaq', 'codes_csv': 'NASDAQ.csv'},
-    3: {'idx_code': '^FTSE', 'market': 'ftse100', 'codes_csv': 'FTSE100.csv'},
+    3: {'idx_code': '^FTSE', 'market': 'ftse100', 'codes_csv': 'none'},
     4: {'idx_code': '^FTMC', 'market': 'ftse250', 'codes_csv': 'FTSE250.csv'},
     5: {'idx_code': '^GSPC', 'market': 'sp500', 'codes_csv': 'SP500.csv'},
     6: {'idx_code': '^DJI', 'market': 'dow30', 'codes_csv': 'DOW.csv'},
