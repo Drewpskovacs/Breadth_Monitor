@@ -436,6 +436,10 @@ def plot_close_and_volume(df_idx, idx):
     date_labels = p_1.index.strftime("%d/%m/%y").tolist()
     p1 = p_1.reset_index(drop=True)
 
+    # Extract start and end dates from df_idx
+    start_date = p_1.index[0].strftime('%d/%m/%y')  # First index value as start date
+    end_date = p_1.index[-1].strftime('%d/%m/%y')  # Last index value as end date
+
     # Create a figure and axis
     graph_name = f'{idx} - Close and Volume'
     fig, ax1 = plt.subplots(figsize=(17, 12))
@@ -446,7 +450,7 @@ def plot_close_and_volume(df_idx, idx):
     ax1.tick_params(axis='y')
 
     # Set x-ticks and x-tick labels for first y-axis
-    # ax1.set_xlabel('Date', color='blue')
+
     ax1.set_xticks(p1.index[::5])
     ax1.set_xticklabels(date_labels[::5], rotation=45)
 
@@ -464,7 +468,7 @@ def plot_close_and_volume(df_idx, idx):
     ax2.set_xticklabels(date_labels[::5], rotation=45)
 
     # Display the plot
-    plt.title(f'{idx} - {hoje} - Lookback: {lookback} days', fontsize=16, fontweight='bold')
+    plt.title(f'{idx} - from: {start_date} to {end_date} - Lookback: {lookback} days', fontsize=16, fontweight='bold')
     # plt.savefig(f'{plots_folder}/{idx}_close_vol.jpg')
     # plt.show(block=False)
     pdf.savefig()
