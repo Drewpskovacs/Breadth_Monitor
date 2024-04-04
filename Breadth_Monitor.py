@@ -326,17 +326,15 @@ def update_index_data(idx, df):
     if df['Volume'].iloc[-1] == 0:
         df = df.drop(df.index[-1])
         print(f'{df.index[-1]} has zero volume. Dropping row and re-updating')
-        start_update_on = df.index[-1]
-    else:
-        # Last row has volume, start update on day after last row
-        start_update_on = df.index[-1] + timedelta(days=1)
+
+    start_update_on = df.index[-1] + timedelta(days=1)
 
     # If last day in df = update until date, no need to update
-    if until_date.date() == start_update_on.date():
+    if until_date.date() == df.index[-1].date():
         print('No need to update')
         #  return updated_idx  # GPT says to make sure to return something meaningful
 
-    elif start_update_on.date() < until_date.date():
+    elif df.index[-1].date() < until_date.date():
         print(f'Last date in {idx} file: {start_update_on.strftime("%A, %d %B %y")}')
         print(f'Update {idx} until: {until_date.strftime("%A, %d %B %y")}')
         # Download missing days
@@ -1561,13 +1559,13 @@ if up_use_dl == 3:
     date_object = datetime.strptime(from_date, "%Y%m%d")
     # Format the datetime object as a string in the desired format
     from_date = date_object.strftime("%Y-%m-%d")
-    print(f'Download until: {until_date}')
+    print(f'Download until: {until_date.strftime("%d-%m-%y")}')
     create_databases(mkt_list, from_date, until_date)
 
 # Use existing data
 elif up_use_dl == 1:
     # Perform update
-    print(f'Update until: {until_date}')
+    print(f'Update until: {until_date.strftime("%d-%m-%y")}')
     last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
 
 ##########################################################################
