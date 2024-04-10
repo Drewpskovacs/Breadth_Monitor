@@ -1554,9 +1554,11 @@ until_date = download_until()
 # When downloading new, ask for database starting date (from_date). Ask here or it asks for it on each pass
 if up_use_dl == 3:
     # When downloading, must specify start date
-    from_date = input("Enter start date (YYYYMMDD): ") or "20000101"
+    # from_date = input("Enter start date (YYYYMMDD): ") or "20000101"
+    from_date_input = input("Enter start date (DDMMYYYY): ") or "01012000"
     # Convert the string to a datetime object
-    date_object = datetime.strptime(from_date, "%Y%m%d")
+    # date_object = datetime.strptime(from_date, "%Y%m%d")
+    date_object = datetime.strptime(from_date_input, "%d%m%Y")
     # Format the datetime object as a string in the desired format
     from_date = date_object.strftime("%Y-%m-%d")
     print(f'Download until: {until_date.strftime("%d-%m-%y")}')
