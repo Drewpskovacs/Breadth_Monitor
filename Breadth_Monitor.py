@@ -12,6 +12,7 @@ import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import os
 
 #####################################
 # Variables - Setup
@@ -1673,3 +1674,13 @@ for nums in mkt_list:
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
             plot_table('hilo_df.csv', 'Highs and Lows')
+
+# Check if the PDF file exists in the folder
+pdf_filename = os.path.join(pdf_folder, '^BVSP.pdf')
+if os.path.exists(pdf_filename):
+    try:
+        os.startfile(pdf_filename)  # Open PDF using the default viewer on Windows
+    except AttributeError:
+        os.system('open "{}"'.format(pdf_filename))  # Open PDF using the default viewer on macOS or Linux
+else:
+    print("The PDF file '^BVSP.pdf' does not exist in the specified folder.")
