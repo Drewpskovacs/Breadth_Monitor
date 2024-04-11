@@ -112,7 +112,7 @@ def get_user_choice():
 def get_lookback():
     while True:
         try:
-            lookback_period = int(input("Days to look back: (510 default)") or 510)
+            lookback_period = int(input("Days to look back (510 default): ") or 510)
             return lookback_period  # Return the lookback value if the input is successfully converted to an integer
         except ValueError:
             print("Invalid input. Please enter an integer.")
