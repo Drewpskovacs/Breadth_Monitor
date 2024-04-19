@@ -53,6 +53,7 @@ def download_and_save_extras(tikr, mk, first, last):
     print(f"Data for {tikr} downloaded and saved to {file_name}")
     #plot_close_and_volume(tikr, mk)
 
+
 def download_and_save_data_extra_yahoo_indexes(yahoo, first, last):
     for key, value in yahoo.items():
         ticker = value['idx_code']
