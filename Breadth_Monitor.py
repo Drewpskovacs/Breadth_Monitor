@@ -1478,6 +1478,95 @@ def plot_normalized_indexes(mkt_dict, idx):
     plt.close()
 
 
+#########################################################################
+# Plotting the yahoo indexes normalised
+#########################################################################
+def plot_normalized_indexes_minus_btc(mkt_dict, idx):
+    global lookback
+    global data_folder
+
+    # Extract 'idx_code' values from the filtered dictionary
+    idx_code_list = [value['idx_code'] for value in mkt_dict.values() if value['idx_code'] != 'BTC-USD']
+
+    # Initialize combined_df before the loop
+    combined_df = pd.DataFrame()
+
+    # Iterate through all_idx_codes
+    for code in idx_code_list:
+        # Read the CSV file for the current idx_code, only selecting 'Adj Close' column
+        csv_file = f"{data_folder}/INDEX_{code}.csv"
+        df = pd.read_csv(csv_file, usecols=['Date', 'Adj Close'], index_col='Date', parse_dates=True)
+
+        # Rename the 'Adj Close' column to the idx_code
+        adj_close_col = df['Adj Close'].rename(code)
+
+        # Concatenate the 'Adj Close' column to the combined DataFrame
+        combined_df = pd.concat([combined_df, adj_close_col], axis=1, sort=True)
+        combined_df.index = pd.to_datetime(combined_df.index)
+        combined_df.rename(columns={'Adj Close': idx}, inplace=True)
+
+    # print('Combined index df:')
+    # print(combined_df.tail(10))
+
+    # Plot the normalized data
+    p = combined_df.tail(lookback)
+    # Remove nan (bitcoin)
+    pp = p.dropna()
+    # Rebase p
+    p_1 = pp / pp.iloc[0]
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    p1 = p_1.reset_index(drop=True)
+
+    # Checks cos of "ValueError: Axis limits cannot be NaN or Inf"
+    # print(f'Check {idx_code} for NaN {p1.isnull().sum().sum()}')  # Check for NaN
+    # print(f'Check {idx_code} for Inf {np.isinf(p1).sum().sum()}')  # Check for Inf
+
+    # Calculate the maximum and minimum values in the DataFrame columns
+    # max_value = p1.max().max()
+    # min_value = p1.min().min()
+
+    # Create a figure and axis
+    fig, ax1 = plt.subplots(figsize=(17, 12))
+
+    # Define a set of distinct colors and linestyles
+    lines = ['-', '--', '-.', ':']
+    # Create a cycle iterator for linestyles
+    line_styles = cycle(lines)
+
+    # Iterate through all columns and plot with distinct colors and linestyles
+    for code in p1.columns:
+        line = next(line_styles)
+        ax1.plot(p1.index, p1[code], label=code, linestyle=line)
+
+    # Plot closing price on the first y-axis
+    ax1.set_title(f"Comparing Indices (no BTC)")
+    ax1.set_ylabel('Normalised Close', color='black')
+    ax1.tick_params(axis='y')
+    # Set y-axis limits based on the calculated max and min values
+
+    # ax1.set_ylim(bottom=min_value, top=max_value)
+    # print(p1)
+    if not p1.empty:
+        max_value = p1.max().max()
+        min_value = p1.min().min()
+        # Set y-axis limits based on the calculated max and min values
+        ax1.set_ylim(bottom=min_value, top=max_value)
+    else:
+        print(f"{idx_code} dataFrame is empty. Skipping setting y-axis limits.")
+
+    # Set x-ticks and x-tick labels for first y-axis
+    # ax1.set_xlabel('Date', color='blue')
+    ax1.set_xticks(p1.index[::5])
+    ax1.set_xticklabels(date_labels[::5], rotation=45)
+
+    # Combine legends for both subplots
+    lines, labels = ax1.get_legend_handles_labels()
+    ax1.legend(lines, labels, loc='upper left')
+
+    pdf.savefig()
+    plt.close()
+
+
 ##########################################################################
 # Plot a table
 ##########################################################################
@@ -1598,11 +1687,6 @@ for nums in mkt_list:
             # print(sample_idx)
             total_stocks = comp_df.columns.get_level_values(1).nunique()
 
-            # Which market will be used for calculations
-            # print(f'Using {idx_code} and {market_name}')
-
-            # with PdfPages(pdf_filename) as pdf:
-
             # Basic plot to get an idea of correct shape
             plot_close_and_volume(idx_df, idx_code)
 
@@ -1631,6 +1715,7 @@ for nums in mkt_list:
 
             # Comparing indices
             plot_normalized_indexes(filtered_index_dict, idx_code)
+            plot_normalized_indexes_minus_btc(filtered_index_dict, idx_code)
 
             ##########################################################################
             # Breadth dataframe
