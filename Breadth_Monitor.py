@@ -1143,9 +1143,9 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     return cum_vol
 
 
-##########################################################################
-# % movers over time
-##########################################################################
+##############################################################################
+# % Movers
+##############################################################################
 def movers(df_close, idx, df_close_idx):
     global lookback
 
@@ -1187,31 +1187,80 @@ def movers(df_close, idx, df_close_idx):
     c4_df = breadth_df_summed[['>4%1d', '<4%1d']]
     c13_df = breadth_df_summed[['>13%34d', '<13%34d']]
 
+    #################################################
+    # Short term movers
+    #################################################
+
+    b_plus = df_filled.pct_change(periods=2) >= 0.06
+    b_minus = df_filled.pct_change(periods=2) <= -0.06
+    c_plus = df_filled.pct_change(periods=3) >= 0.07
+    c_minus = df_filled.pct_change(periods=3) <= -0.07
+    d_plus = df_filled.pct_change(periods=4) >= 0.08
+    d_minus = df_filled.pct_change(periods=4) <= -0.08
+    e_plus = df_filled.pct_change(periods=5) >= 0.09
+    e_minus = df_filled.pct_change(periods=5) <= -0.09
+    f_plus = df_filled.pct_change(periods=6) >= 0.1
+    f_minus = df_filled.pct_change(periods=6) <= -0.1
+    g_plus = df_filled.pct_change(periods=7) >= 0.11
+    g_minus = df_filled.pct_change(periods=7) <= -0.11
+    h_plus = df_filled.pct_change(periods=8) >= 0.12
+    h_minus = df_filled.pct_change(periods=8) <= -0.12
+
+    # Create the new dataframe
+    st_movers_df = pd.concat([c4plus, c4minus,
+                              b_plus, b_minus,
+                              c_plus, c_minus,
+                              d_plus, d_minus,
+                              e_plus, e_minus,
+                              f_plus, f_minus,
+                              g_plus, g_minus,
+                              h_plus, h_minus
+                              ],
+                             keys=['>4%1d', '<4%1d',
+                                   '>6%2D', '<6%2D',
+                                   '>7%3D', '<7%3D',
+                                   '>8%4D', '<8%4D',
+                                   '>9%5D', '<9%5D',
+                                   '>10%6D', '<10%6D',
+                                   '>11%7D', '<11%7D',
+                                   '>12%8D', '<12%8D'
+                                   ], axis=1
+                             )
+
+    st_movers_df = st_movers_df.astype(int)
+
+    # Group by the first level of columns and sum along the rows
+    st_breadth_df_summed = st_movers_df.T.groupby(level=0, sort=False).sum().T
+
     #############################################################################
     # PLOTTING
     #############################################################################
 
     p = breadth_df_summed.tail(lookback)
+    st_p = st_breadth_df_summed.tail(lookback)
+
     p_1 = p[['>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d']]
-    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
     p1 = p_1.reset_index().rename(columns={'index': 'Date'})
 
-    p_2 = p[['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']].tail(lookback)
+    p_2 = p[['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']]
     p2 = p_2.reset_index().rename(columns={'index': 'Date'})
+
+    st_p_1 = st_p[['>4%1d', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D', '>12%8D']]
+    date_labels = st_p_1.index.strftime("%d/%m/%y").tolist()
+    st_p1 = st_p_1.reset_index().rename(columns={'index': 'Date'})
+
+    st_p_2 = st_p[['<4%1d', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']]
+    st_p2 = st_p_2.reset_index().rename(columns={'index': 'Date'})
+
+    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
 
     pidx = df_close_idx.tail(lookback)
 
-    '''p = breadth_df_summed.reset_index().rename(columns={'index': 'Date'})
-    p1 = p[['Date', '>4%1d', '>25%Q', '>25%M', '>50%M', '>13%34d']].tail(lookback)
-    p2 = p[['Date', '<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']].tail(lookback)
-    date_labels = p1['Date'].dt.strftime("%d/%m/%Y").tolist()
-    pidx = df_close_idx.tail(lookback)'''
-
     # Create subplots
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
+    fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(17, 24))
 
     #############################################################################
-    # Top subplot POSITIVE MOVERS
+    # Top subplot Long term POSITIVE MOVERS
     #############################################################################
 
     # Create a stacked bar chart
@@ -1246,7 +1295,42 @@ def movers(df_close, idx, df_close_idx):
     axs[0].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
 
     #############################################################################
-    # Bottom subplot NEGATIVE MOVERS
+    # 2nd subplot Short term POSITIVE MOVERS
+    #############################################################################
+
+    # Create a stacked bar chart
+    bottom = None
+    to_plot = st_p1.columns[1:]
+    # for col in p1.columns[1:]:
+    for col in to_plot:
+        axs[1].bar(st_p1.index, st_p1[col], label=col, bottom=bottom)
+        if bottom is None:
+            bottom = st_p1[col]
+        else:
+            bottom += st_p1[col]
+
+    axs[1].set_xticks(st_p1.index[::5])
+    axs[1].set_xticklabels(date_labels[::5], rotation=45)
+
+    # Adding labels for both y-axes
+    axs[1].set_ylabel('Short Term Plus % movers')
+    # Add title for plot
+    axs[1].set_title(f"{idx} - Short Term Positive Movers")
+
+    # Creating the second y-axis on the right
+    axs1_twin = axs[1].twinx()
+    axs1_twin.fill_between(st_p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
+    axs1_twin.plot(st_p1.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
+    axs1_twin.set_ylim(bottom=min(pidx), top=max(pidx))
+    axs1_twin.set_ylabel(idx, color='black')
+
+    # Combine legends for ax and ax_twin into a single legend
+    lines, labels = axs[1].get_legend_handles_labels()
+    lines_twin, labels_twin = axs1_twin.get_legend_handles_labels()
+    axs[1].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
+
+    #############################################################################
+    # 3rd subplot LT NEGATIVE MOVERS
     #############################################################################
 
     # Create a stacked bar chart
@@ -1255,31 +1339,67 @@ def movers(df_close, idx, df_close_idx):
 
     for col in to_plot:
         # for col in p2.columns[1:]:
-        axs[1].bar(p2.index, -p2[col], label=col, bottom=bottom)
+        axs[2].bar(p2.index, -p2[col], label=col, bottom=bottom)
         if bottom is None:
             bottom = -p2[col]
         else:
             bottom += -p2[col]
 
     # Adding the x-axis with dates every 5
-    axs[1].set_xticks(p1.index[::10])
-    axs[1].set_xticklabels(date_labels[::10], rotation=45)
+    axs[2].set_xticks(p1.index[::10])
+    axs[2].set_xticklabels(date_labels[::10], rotation=45)
     # Adding labels for both y-axes
     axs[1].set_ylabel('Negative % Movers')
     # Add title for plot
-    axs[1].set_title(f"{idx} - Negative Movers")
+    axs[2].set_title(f"{idx} - Negative Movers")
 
     # Creating the second y-axis on the right
-    axs1_twin = axs[1].twinx()
-    axs1_twin.fill_between(p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
-    axs1_twin.plot(p2.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
-    axs1_twin.set_ylim(bottom=min(pidx), top=max(pidx))
-    axs1_twin.set_ylabel(idx, color='black')
+    axs2_twin = axs[2].twinx()
+    axs2_twin.fill_between(p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
+    axs2_twin.plot(p2.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
+    axs2_twin.set_ylim(bottom=min(pidx), top=max(pidx))
+    axs2_twin.set_ylabel(idx, color='black')
 
     # Combine legends for ax and ax_twin into a single legend
-    lines, labels = axs[1].get_legend_handles_labels()
-    lines_twin, labels_twin = axs0_twin.get_legend_handles_labels()
-    axs[1].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
+    lines, labels = axs[2].get_legend_handles_labels()
+    lines_twin, labels_twin = axs2_twin.get_legend_handles_labels()
+    axs[2].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
+
+    #############################################################################
+    # Bottom subplot Short Term NEGATIVE MOVERS
+    #############################################################################
+
+    # Create a stacked bar chart
+    bottom = None
+    to_plot = st_p2.columns[1:]
+
+    for col in to_plot:
+        # for col in p2.columns[1:]:
+        axs[3].bar(st_p2.index, -st_p2[col], label=col, bottom=bottom)
+        if bottom is None:
+            bottom = -st_p2[col]
+        else:
+            bottom += -st_p2[col]
+
+    # Adding the x-axis with dates every 5
+    axs[3].set_xticks(st_p1.index[::10])
+    axs[3].set_xticklabels(date_labels[::10], rotation=45)
+    # Adding labels for both y-axes
+    axs[3].set_ylabel('Short Term Negative % Movers')
+    # Add title for plot
+    axs[3].set_title(f"{idx} - Short Term Negative Movers")
+
+    # Creating the second y-axis on the right
+    axs3_twin = axs[3].twinx()
+    axs3_twin.fill_between(st_p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
+    axs3_twin.plot(st_p2.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
+    axs3_twin.set_ylim(bottom=min(pidx), top=max(pidx))
+    axs3_twin.set_ylabel(idx, color='black')
+
+    # Combine legends for ax and ax_twin into a single legend
+    lines, labels = axs[3].get_legend_handles_labels()
+    lines_twin, labels_twin = axs3_twin.get_legend_handles_labels()
+    axs[3].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
 
     # plt.savefig(f'{plots_folder}/{idx}_pct_movers.jpg')
     plt.tight_layout()
@@ -1287,7 +1407,7 @@ def movers(df_close, idx, df_close_idx):
     pdf.savefig()
     plt.close()
 
-    return movers_df, breadth_df_summed, c4_df, c13_df
+    return movers_df, st_movers_df, breadth_df_summed, st_breadth_df_summed,c4_df, c13_df
 
 
 ##########################################################################
@@ -1710,7 +1830,7 @@ for nums in mkt_list:
             acc_vol = accumulated_volume(comp_df['Adj Close'], comp_df['Volume'], idx_code, idx_df['Adj Close'])
 
             # Breadth: movers and ratios
-            mvrs, mvrs_sum, fourpc_df, thirteenpc_df = movers(comp_df['Adj Close'], idx_code, idx_df['Adj Close'])
+            mvrs, st_mvrs, mvrs_sum, st_mvrs_sum, fourpc_df, thirteenpc_df = movers(comp_df['Adj Close'], idx_code, idx_df['Adj Close'])
             br_ratios = ratios(fourpc_df, thirteenpc_df, idx_code, idx_df['Adj Close'])
 
             # Comparing indices
