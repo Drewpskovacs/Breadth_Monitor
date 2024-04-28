@@ -1056,6 +1056,9 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     cum_vol_df = pd.DataFrame(cum_vol)  # This is a dataframe
 
     # Calculate the percent difference between markets entire volume
+    # Replace zeros with the previous non-zero value
+    df_vol.replace(0, method='ffill', inplace=True)
+
     total_mkt_vol = df_vol.sum(axis=1).rename('MktVol')
     mkt_vol_pct_chg_1 = total_mkt_vol.pct_change().mul(100)  # series
     mkt_vol_pct_chg = pd.DataFrame(mkt_vol_pct_chg_1)
@@ -1110,8 +1113,8 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
 
     #############################################################################
     # Plot difference vol %
-    #############################################################################
-    axs[1].bar(p2.index, p2['MktVol'], width=1, color='goldenrod', alpha=0.7, label='Vol % change')
+    #############################################################################(
+    axs[1].bar(p2.index, p2['MktVol'], width=1, color='goldenrod', alpha=0.7, label='Vol % change:- *ffil used on zero values')
     axs[1].set_xticks(p2.index[::5])
     axs[1].set_xticklabels(date_labels_vpct[::5], rotation=45, ha='right')
     axs[1].set_ylabel('Vol % change', color='black')
@@ -1216,7 +1219,7 @@ def movers(df_close, idx, df_close_idx):
                               g_plus, g_minus,
                               h_plus, h_minus
                               ],
-                             keys=['>4%1d', '<4%1d',
+                             keys=['>4%D', '<4%D',
                                    '>6%2D', '<6%2D',
                                    '>7%3D', '<7%3D',
                                    '>8%4D', '<8%4D',
@@ -1245,11 +1248,11 @@ def movers(df_close, idx, df_close_idx):
     p_2 = p[['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']]
     p2 = p_2.reset_index().rename(columns={'index': 'Date'})
 
-    st_p_1 = st_p[['>4%1d', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D', '>12%8D']]
+    st_p_1 = st_p[['>4%D', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D', '>12%8D']]
     date_labels = st_p_1.index.strftime("%d/%m/%y").tolist()
     st_p1 = st_p_1.reset_index().rename(columns={'index': 'Date'})
 
-    st_p_2 = st_p[['<4%1d', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']]
+    st_p_2 = st_p[['<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']]
     st_p2 = st_p_2.reset_index().rename(columns={'index': 'Date'})
 
     date_labels = p_1.index.strftime("%d/%m/%y").tolist()
@@ -1842,19 +1845,20 @@ for nums in mkt_list:
             ##########################################################################
             adr_df = pd.DataFrame(adr, columns=[adr.name])
             acc_vol_df = pd.DataFrame(acc_vol, columns=[acc_vol.name])
-            all_dfs_df = pd.concat([high_low_df, over_short_mas_pct, over_40ma_pct,
-                                    over_long_mas_pct, mvrs_sum, br_ratios,
+            all_dfs_df = pd.concat([high_low_df,
+                                    over_short_mas_pct,
+                                    over_40ma_pct,
+                                    over_long_mas_pct,
+                                    mvrs, st_mvrs,
+                                    mvrs_sum, st_mvrs_sum,
+                                    br_ratios,
                                     adr_df, idx_df, acc_vol_df], axis=1)
-            # print(breadth_df.tail(10))
-            # print(breadth_df.columns)
-            # Select the last 10 rows
-            # nan_check = all_dfs_df.tail(10).isna()
-            # if nan_check.any().any():
-            #     print("NaN in last 10 rows")
-            # else:
-            #     print("No NaN in last 10 rows")
-            # Display the result
-            # print(nan_check)
+
+            # print(all_dfs_df.columns[all_dfs_df.columns.duplicated()])
+
+            ##############################
+            # Breadth Monitor Table
+            ##############################
             stockbee_df = all_dfs_df[['>4%1d', '<4%1d',
                                       'ratio5', 'ratio10',
                                       '>25%Q', '<25%Q',
@@ -1863,6 +1867,7 @@ for nums in mkt_list:
                                       '>13%34d', '<13%34d',
                                       '$>MA40',
                                       'Adj Close']]
+
             # Negate columns so that the percentile colours are inverted
             columns_to_negate = ['<4%1d', '<25%Q', '<25%M', '<50%M', '<13%34d']
             for column in columns_to_negate:
@@ -1872,6 +1877,9 @@ for nums in mkt_list:
             stockbee_df.to_csv('stockbee_df.csv')
             plot_table('stockbee_df.csv', 'Breadth Monitor')
 
+            ##############################
+            # Highs and Lows Table
+            ##############################
             hilo_df = all_dfs_df[['ATH', 'ATL',
                                   '12MH', '12ML',
                                   '3MH', '3ML',
@@ -1879,6 +1887,31 @@ for nums in mkt_list:
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
             plot_table('hilo_df.csv', 'Highs and Lows')
+
+            ##############################
+            # Short Term Movers Table
+            ##############################
+            # Create a copy of the DataFrame to ensure you're working with the original DataFrame
+            short_term_movers = all_dfs_df[['adv_dec_ratio',
+                                            '>4%D', '<4%D',
+                                            '>6%2D', '<6%2D',
+                                            '>7%3D', '<7%3D',
+                                            '>8%4D', '<8%4D',
+                                            '>9%5D', '<9%5D',
+                                            '>10%6D', '<10%6D',
+                                            '>11%7D', '<11%7D',
+                                            '>12%8D', '<12%8D'
+                                            ]].copy()
+            # Negate columns so that the percentile colours are inverted
+            st_columns_to_negate = ['<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']
+            for column in st_columns_to_negate:
+                short_term_movers.loc[:, column] = -short_term_movers[column]
+
+            # Rename the column 'adv_dec_ratio' to 'ADR'
+            short_term_movers.rename(columns={'adv_dec_ratio': 'ADR'}, inplace=True)
+
+            short_term_movers.to_csv('short_term_movers.csv')
+            plot_table('short_term_movers.csv', 'Short term movers')
 
 # Check if the PDF file exists in the folder
 pdf_filename = os.path.join(pdf_folder, '^BVSP.pdf')
