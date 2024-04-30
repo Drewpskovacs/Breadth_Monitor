@@ -450,8 +450,8 @@ def plot_close_and_volume(df_idx, idx):
 
     # Set x-ticks and x-tick labels for first y-axis
 
-    ax1.set_xticks(p1.index[::5])
-    ax1.set_xticklabels(date_labels[::5], rotation=45)
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Add title as text to the plot using data coordinates
     ax1.text(p1.index[0], p1['Adj Close'].max(), graph_name, color='black', ha='left', va='bottom')
@@ -463,8 +463,8 @@ def plot_close_and_volume(df_idx, idx):
     ax2.tick_params(axis='y')
 
     # Set x-ticks and x-tick labels for the second y-axis
-    ax2.set_xticks(p1.index[::5])
-    ax2.set_xticklabels(date_labels[::5], rotation=45)
+    ax2.set_xticks(p1.index[::xlabel_separation])
+    ax2.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Display the plot
     plt.title(f'{idx} - from: {start_date} to {end_date} - Lookback: {lookback} days', fontsize=16, fontweight='bold')
@@ -542,8 +542,8 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     ax.set_ylabel('Highs and Lows')
 
     date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
-    ax.set_xticks(p1.index[::5])
-    ax.set_xticklabels(date_labels[::5], rotation=45)
+    ax.set_xticks(p1.index[::xlabel_separation])
+    ax.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Add title and legend
     plt.title(f"{idx} - Highs and Lows")
@@ -556,8 +556,8 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     ax3 = ax.twinx()
     ax3.plot(p1.index, pidx, 'black', label=idx, linewidth=2)
     ax3.set_ylabel(idx, color='black')
-    ax3.set_xticks(p1.index[::5])
-    ax3.set_xticklabels(date_labels[::5], rotation=45)
+    ax3.set_xticks(p1.index[::xlabel_separation])
+    ax3.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     lines, labels = ax.get_legend_handles_labels()
     lines2, labels2 = ax3.get_legend_handles_labels()
@@ -650,8 +650,8 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
             bottom += p1[col]
 
     # Set x-ticks and x-tick labels for first y-axis
-    ax.set_xticks(p1.index[::5])
-    ax.set_xticklabels(date_labels[::5], rotation=45)
+    ax.set_xticks(p1.index[::xlabel_separation])
+    ax.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Creating the second y-axis on the right
     ax_twin = ax.twinx()
@@ -752,8 +752,8 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs0_twin.plot(pidx.index, pidx, linewidth=2, color='black', label=idx)
 
     # Set x-ticks and x-tick labels for first y-axis
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels[::5], rotation=45)
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
     axs[0].set_ylabel('% stocks above low MAs')
@@ -773,8 +773,8 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs[1].set_ylabel('T2108-(%>40MA)', color='black')
 
     # Set x-ticks and x-tick labels for first y-axis
-    axs[1].set_xticks(p1.index[::5])
-    axs[1].set_xticklabels(date_labels[::5], rotation=45)
+    axs[1].set_xticks(p1.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Add a horizontal dotted lines to show where lows/highs might be
     high = p2['$>MA40'].max()
@@ -807,8 +807,8 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs2_twin.plot(pidx.index, pidx, linewidth=2, color='black', label=idx)
 
     # Set x-ticks and x-tick labels for first y-axis
-    axs[2].set_xticks(p1.index[::5])
-    axs[2].set_xticklabels(date_labels[::5], rotation=45)
+    axs[2].set_xticks(p1.index[::xlabel_separation])
+    axs[2].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
     axs[2].set_ylabel('% stocks above high MAs')
@@ -946,8 +946,8 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     # ax.plot(p1.index, p4, color='green', alpha=0.7, label='Decline/Advance Diff Daily')
     # ax.plot(p1.index, p5, color='yellow', alpha=0.7, label='Cumulative Decline/Advance')
 
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels[::5], rotation=45)
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     axs[0].set_ylabel('Advance/Decline Ratio', color='b')
     # Add title for plot
@@ -989,8 +989,8 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     # Add a horizontal line at 0
     axs[1].axhline(y=0, color='blue', linestyle='--', linewidth=1.5)
 
-    axs[1].set_xticks(p1.index[::5])
-    axs[1].set_xticklabels(date_labels[::5], rotation=45)
+    axs[1].set_xticks(p1.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Plot index
     axs1_twin = axs[1].twinx()
@@ -1018,8 +1018,8 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     # Add a horizontal line at 0
     axs[2].axhline(y=0, color='blue', linestyle='--', linewidth=1.5)
 
-    axs[2].set_xticks(p6.index[::5])
-    axs[2].set_xticklabels(date_labels[::5], rotation=45)
+    axs[2].set_xticks(p6.index[::xlabel_separation])
+    axs[2].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Plot index
     axs2_twin = axs[2].twinx()
@@ -1091,8 +1091,8 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     #############################################################################
 
     axs[0].bar(p1.index, p1['CumVol'], width=1, color='goldenrod', alpha=0.7, label='Accumulated Volume')
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels_accv[::5], rotation=45, ha='right')
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels_accv[::xlabel_separation], rotation=45, ha='right')
     axs[0].set_ylabel('Accumulated Volume', color='black')
 
     axs[0].set_title("Accumulated Volume")
@@ -1113,10 +1113,11 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
 
     #############################################################################
     # Plot difference vol %
-    #############################################################################(
-    axs[1].bar(p2.index, p2['MktVol'], width=1, color='goldenrod', alpha=0.7, label='Vol % change:- *ffil used on zero values')
-    axs[1].set_xticks(p2.index[::5])
-    axs[1].set_xticklabels(date_labels_vpct[::5], rotation=45, ha='right')
+    #############################################################################
+    axs[1].bar(p2.index, p2['MktVol'], width=1, color='goldenrod', alpha=0.7, label='Vol % change:-'
+                                                                                    ' *ffil used on zero values')
+    axs[1].set_xticks(p2.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels_vpct[::xlabel_separation], rotation=45, ha='right')
     axs[1].set_ylabel('Vol % change', color='black')
 
     """# Check if p2['Vol%chg'] is not empty
@@ -1249,13 +1250,17 @@ def movers(df_close, idx, df_close_idx):
     p2 = p_2.reset_index().rename(columns={'index': 'Date'})
 
     st_p_1 = st_p[['>4%D', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D', '>12%8D']]
-    date_labels = st_p_1.index.strftime("%d/%m/%y").tolist()
     st_p1 = st_p_1.reset_index().rename(columns={'index': 'Date'})
 
     st_p_2 = st_p[['<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']]
     st_p2 = st_p_2.reset_index().rename(columns={'index': 'Date'})
 
-    date_labels = p_1.index.strftime("%d/%m/%y").tolist()
+    # Setup x labels for the 4 plots. Use p_1 because p1 has reset the index
+    # Assuming p_1.index contains date values in some format, convert p_1.index to DatetimeIndex
+    labels = p_1.copy()
+    labels.index = pd.to_datetime(labels.index)
+    #print(f"p1.index type = {type(p1.index)}")
+    date_labels = labels.index.strftime("%d/%m/%y").tolist()
 
     pidx = df_close_idx.tail(lookback)
 
@@ -1277,8 +1282,8 @@ def movers(df_close, idx, df_close_idx):
         else:
             bottom += p1[col]
 
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels[::5], rotation=45)
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
     axs[0].set_ylabel('Plus % movers')
@@ -1312,8 +1317,8 @@ def movers(df_close, idx, df_close_idx):
         else:
             bottom += st_p1[col]
 
-    axs[1].set_xticks(st_p1.index[::5])
-    axs[1].set_xticklabels(date_labels[::5], rotation=45)
+    axs[1].set_xticks(st_p1.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
     axs[1].set_ylabel('Short Term Plus % movers')
@@ -1349,10 +1354,10 @@ def movers(df_close, idx, df_close_idx):
             bottom += -p2[col]
 
     # Adding the x-axis with dates every 5
-    axs[2].set_xticks(p1.index[::10])
-    axs[2].set_xticklabels(date_labels[::10], rotation=45)
+    axs[2].set_xticks(p2.index[::xlabel_separation])
+    axs[2].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
     # Adding labels for both y-axes
-    axs[1].set_ylabel('Negative % Movers')
+    axs[2].set_ylabel('Negative % Movers')
     # Add title for plot
     axs[2].set_title(f"{idx} - Negative Movers")
 
@@ -1385,8 +1390,9 @@ def movers(df_close, idx, df_close_idx):
             bottom += -st_p2[col]
 
     # Adding the x-axis with dates every 5
-    axs[3].set_xticks(st_p1.index[::10])
-    axs[3].set_xticklabels(date_labels[::10], rotation=45)
+    axs[3].set_xticks(st_p2.index[::xlabel_separation])
+    axs[3].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
     # Adding labels for both y-axes
     axs[3].set_ylabel('Short Term Negative % Movers')
     # Add title for plot
@@ -1410,7 +1416,7 @@ def movers(df_close, idx, df_close_idx):
     pdf.savefig()
     plt.close()
 
-    return movers_df, st_movers_df, breadth_df_summed, st_breadth_df_summed,c4_df, c13_df
+    return movers_df, st_movers_df, breadth_df_summed, st_breadth_df_summed, c4_df, c13_df
 
 
 ##########################################################################
@@ -1449,8 +1455,8 @@ def ratios(df4, df13, idx, df_close_idx):
     axs[0].plot(p1.index, p1['ratio10'], label='10-day breadth ratio', color='green', zorder=0)
 
     # Adding the x-axis with dates every 5
-    axs[0].set_xticks(p1.index[::5])
-    axs[0].set_xticklabels(date_labels[::5], rotation=45)
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axs[]es
     axs[0].set_ylabel('5 and 10 day ratios')
@@ -1482,8 +1488,8 @@ def ratios(df4, df13, idx, df_close_idx):
 
     # Adding the x-axis with dates
     axs[1].plot(p1.index, p1['tftdr'], label='13/34D', color='red', zorder=0)
-    axs[1].set_xticks(p1.index[::5])
-    axs[1].set_xticklabels(date_labels[::5], rotation=45)
+    axs[1].set_xticks(p1.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axs[]es
     axs[1].set_ylabel('13/34 ratio')
@@ -1590,8 +1596,8 @@ def plot_normalized_indexes(mkt_dict, idx):
 
     # Set x-ticks and x-tick labels for first y-axis
     # ax1.set_xlabel('Date', color='blue')
-    ax1.set_xticks(p1.index[::5])
-    ax1.set_xticklabels(date_labels[::5], rotation=45)
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Combine legends for both subplots
     lines, labels = ax1.get_legend_handles_labels()
@@ -1679,8 +1685,8 @@ def plot_normalized_indexes_minus_btc(mkt_dict, idx):
 
     # Set x-ticks and x-tick labels for first y-axis
     # ax1.set_xlabel('Date', color='blue')
-    ax1.set_xticks(p1.index[::5])
-    ax1.set_xticklabels(date_labels[::5], rotation=45)
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Combine legends for both subplots
     lines, labels = ax1.get_legend_handles_labels()
@@ -1763,6 +1769,8 @@ up_use_dl = get_user_choice()
 lookback = get_lookback()
 from_date = "2000-01-01"
 until_date = download_until()
+number_xlabels = 50
+xlabel_separation = int(lookback/number_xlabels)
 
 # When downloading new, ask for database starting date (from_date). Ask here or it asks for it on each pass
 if up_use_dl == 3:
