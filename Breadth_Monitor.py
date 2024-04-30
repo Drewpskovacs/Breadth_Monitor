@@ -539,7 +539,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     for label in reversed(p1.columns[1:]):
         plt.bar(p1.index, p1[label], label=label, color=colors[label])
 
-    ax.set_ylabel('Highs and Lows')
+    ax.set_ylabel('Number of Highs and Lows')
 
     date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
     ax.set_xticks(p1.index[::xlabel_separation])
@@ -658,7 +658,7 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
     ax_twin.plot(p1.index, pidx, 'black', label=idx, linewidth=2)
 
     # Adding labels for both y-axes
-    ax.set_ylabel('Avg % between MA and Close')
+    ax.set_ylabel("Avg % between MA and Close")
     ax_twin.set_ylabel(idx, color='black')
 
     # Combine legends for ax and ax_twin into a single legend
@@ -667,7 +667,7 @@ def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
     ax.legend(lines + lines_twin, labels + labels_twin, loc='upper left')
 
     # Add title for plot
-    ax.set_title(f"{idx} - Avg % between MA and Close")
+    ax.set_title(f"{idx} - Market's Avg % diff. between ticker's moving average (MA) and Close")
 
     # plt.savefig(f'{plots_folder}/{idx}_close_to_ma.jpg')
     # plt.show(block=False)
@@ -756,7 +756,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
-    axs[0].set_ylabel('% stocks above low MAs')
+    axs[0].set_ylabel('% tickers above low MAs')
     axs0_twin.set_ylabel(idx, color='black')
 
     # Combine legends for both subplots
@@ -765,7 +765,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs0_twin.legend(lines0 + lines0_twin, labels0 + labels0_twin, loc='upper left')
 
     # Add title for plot
-    axs[0].set_title(f"{idx} - % stocks above low MAs")
+    axs[0].set_title(f"{idx} - % tickers above (low) Moving Averages")
 
     # Plot T2108 vs Close on middle subplot
     #################################################################################
@@ -797,7 +797,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs1_twin.legend(lines1 + lines1_twin, labels1 + labels1_twin, loc='upper left')
 
     # Add title for plot
-    axs[1].set_title(f"{idx} - T2108 (>MA40)")
+    axs[1].set_title(f"{idx} - T2108 (% tickers above 40 day Moving Average)")
 
     # Plot > high MAs on bottom subplot
     #################################################################################
@@ -811,7 +811,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs[2].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Adding labels for both y-axes
-    axs[2].set_ylabel('% stocks above high MAs')
+    axs[2].set_ylabel('% tickers above high MAs')
     axs2_twin.set_ylabel(idx, color='black')
 
     # Combine legends for both subplots
@@ -820,7 +820,7 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     axs2_twin.legend(lines2 + lines2_twin, labels2 + labels2_twin, loc='upper left')
 
     # Add title for plot
-    axs[2].set_title(f"{idx} - % stocks above high MAs")
+    axs[2].set_title(f"{idx} - % tickers above (high) Moving Averages")
 
     # plt.savefig(f'{plots_folder}/{idx}_stocks_over_mas.jpg')
     plt.tight_layout(pad=1.0)
@@ -977,9 +977,9 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     #####################
     # Plot A/D cumulative
     #####################
-    axs[1].plot(p5.index, p5, color='b', alpha=0.7, label='Cumulative Advance/Decline')
-    axs[1].set_ylabel('Cumulative Adv - Dec', color='black')
-    axs[1].set_title(f"{idx} - Cumulative Advances minus Declines")
+    axs[1].plot(p5.index, p5, color='b', alpha=0.7, label='Cumulative (Advances - Declines)')
+    axs[1].set_ylabel('Cumulative (Adv - Dec)', color='black')
+    axs[1].set_title(f"{idx} - Cumulative (Advances - Declines)")
 
     # Set y-axis limits to the range of accumulated volume checking for NaN or Inf
     valid_values = p5[~np.isnan(p5) & ~np.isinf(p5)]
@@ -1259,7 +1259,7 @@ def movers(df_close, idx, df_close_idx):
     # Assuming p_1.index contains date values in some format, convert p_1.index to DatetimeIndex
     labels = p_1.copy()
     labels.index = pd.to_datetime(labels.index)
-    #print(f"p1.index type = {type(p1.index)}")
+    # print(f"p1.index type = {type(p1.index)}")
     date_labels = labels.index.strftime("%d/%m/%y").tolist()
 
     pidx = df_close_idx.tail(lookback)
@@ -1461,7 +1461,8 @@ def ratios(df4, df13, idx, df_close_idx):
     # Adding labels for both y-axs[]es
     axs[0].set_ylabel('5 and 10 day ratios')
     # Add title for plot
-    axs[0].set_title(f"{idx} - Breadth Ratios")
+    axs[0].set_title(f"{idx} - Breadth Ratios (No. 4% daily B-Outs in 5 (or 10) days / number of 4% daily B-Downs in "
+                     f"5 (or 10) days")
 
     # Creating the second y-axs[]is on the right
     axs0_twin = axs[0].twinx()
@@ -1494,7 +1495,7 @@ def ratios(df4, df13, idx, df_close_idx):
     # Adding labels for both y-axs[]es
     axs[1].set_ylabel('13/34 ratio')
     # Add title for plot
-    axs[1].set_title(f"{idx} - 13/34D Ratio")
+    axs[1].set_title(f"{idx} - No. tickers up 13% in 34 days minus No. tickers down 13% in 34 days")
 
     # Combine legends for axs[] and axs[]_twin into a single legend
     lines, labels = axs[1].get_legend_handles_labels()
@@ -1805,7 +1806,7 @@ for nums in mkt_list:
     if tickers != 'none':
         # pdf_filename = f'{pdf_folder}/{idx_code}_{datetime.today().strftime("%Y-%m-%d")}.pdf'
         pdf_filename = f'{pdf_folder}/{idx_code}.pdf'
-        with PdfPages(pdf_filename) as pdf:
+        with (PdfPages(pdf_filename) as pdf):
             #  This is required because we are in a new loop and idx/eod_df are undefined
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
             comp_df = pd.read_csv(f'{data_folder}/EOD_{market_name}.csv', header=[0, 1], index_col=0, parse_dates=True)
