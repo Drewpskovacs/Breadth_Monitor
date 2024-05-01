@@ -155,15 +155,6 @@ def download_components_data(mkt, ticker_list, first, last):
     # Convert the index to DateTimeIndex
     components_df.index = pd.to_datetime(components_df.index)
 
-    # Count how many zeros are in the original Volume column (ignore last entry which is often zero)
-    original_zeros_count = (components_df.iloc[:-1]['Volume'] == 0).sum()  # original_zeros_count is a series
-    sum_tickers_with_zero_volume = original_zeros_count.astype(bool).sum()
-    total_zero_entries = original_zeros_count.sum()
-
-    print(f'{mkt}: {total_zero_entries} zero volume entries.')
-    print(f'{sum_tickers_with_zero_volume} tickers with at least one zero volume entry.')
-    # print(f'{mkt} zero volume count: {original_zeros_count}')
-
     components_df.to_csv(f'{data_folder}/EOD_{mkt}.csv')  # , index=False)
     components_df_file_saved = f'{data_folder}/EOD_{mkt}.csv'
 
@@ -1822,7 +1813,7 @@ for nums in mkt_list:
             # print(f'First and last 3 rows of components df ({market_name}):')
             # sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
             # print(sample_mkt)
-            # print(f'First and last 3 rows of index df ({idx_code}):')
+            # print(f"First and last 3 rows of index df [{idx_code}]:")
             # sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
             # print(sample_idx)
 
