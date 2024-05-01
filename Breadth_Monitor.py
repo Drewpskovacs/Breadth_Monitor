@@ -155,18 +155,14 @@ def download_components_data(mkt, ticker_list, first, last):
     # Convert the index to DateTimeIndex
     components_df.index = pd.to_datetime(components_df.index)
 
-    # Find the last date in the DataFrame
-    last_date = components_df.index[-1]
+    # Count how many zeros are in the original Volume column (ignore last entry which is often zero)
+    original_zeros_count = (components_df.iloc[:-1]['Volume'] == 0).sum()  # original_zeros_count is a series
+    sum_tickers_with_zero_volume = original_zeros_count.astype(bool).sum()
+    total_zero_entries = original_zeros_count.sum()
 
-    # Count how many zeros are in the original Volume column
-    original_zeros_count = (components_df['Volume'] == 0).sum()
-    print(f'{mkt} zero volume count: {original_zeros_count}')
-
-    # Remove historic zero volumes in components_df_df and replace with next valid volume (some tickers have all 0s)
-    # components_df['Volume'] = components_df['Volume'].replace(0, pd.NA).fillna(method='bfill')
-
-    # Change NaN back to zero (to keep last zero in column, if present, which will be changed later)
-    # components_df['Volume'] = components_df['Volume'].fillna(0)
+    print(f'{mkt}: {total_zero_entries} zero volume entries.')
+    print(f'{sum_tickers_with_zero_volume} tickers with at least one zero volume entry.')
+    # print(f'{mkt} zero volume count: {original_zeros_count}')
 
     components_df.to_csv(f'{data_folder}/EOD_{mkt}.csv')  # , index=False)
     components_df_file_saved = f'{data_folder}/EOD_{mkt}.csv'
@@ -1788,7 +1784,7 @@ xlabel_separation = int(lookback/number_xlabels)
 if up_use_dl == 3:
     # When downloading, must specify start date
     # from_date = input("Enter start date (YYYYMMDD): ") or "20000101"
-    from_date_input = input("Enter start date (DDMMYYYY): ") or "01012000"
+    from_date_input = input("Enter start date (DDMMYYYY): ") or "01012013"
     # Convert the string to a datetime object
     # date_object = datetime.strptime(from_date, "%Y%m%d")
     date_object = datetime.strptime(from_date_input, "%d%m%Y")
@@ -1802,6 +1798,7 @@ elif up_use_dl == 1:
     # Perform update
     print(f'Update until: {until_date.strftime("%d-%m-%y")}')
     last_date_in_component_csv, component_df, last_date_in_index_csv, index_df = update_databases(mkt_list)
+
 
 ##########################################################################
 # -----------------BREADTH AND INDICATORS------------------------
@@ -1823,11 +1820,25 @@ for nums in mkt_list:
             comp_df = pd.read_csv(f'{data_folder}/EOD_{market_name}.csv', header=[0, 1], index_col=0, parse_dates=True)
 
             # print(f'First and last 3 rows of components df ({market_name}):')
-            sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
+            # sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
             # print(sample_mkt)
             # print(f'First and last 3 rows of index df ({idx_code}):')
-            sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
+            # sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
             # print(sample_idx)
+
+            # Count how many zeros are in Volume column (ignore last entry which is often zero)
+            original_zeros_count = (comp_df.iloc[:-1]['Volume'] == 0).sum()  # original_zeros_count is a series
+            sum_tickers_with_zero_volume = original_zeros_count.astype(bool).sum()
+            total_zero_entries = original_zeros_count.sum()
+
+            print(f'{idx_code}: {len(original_zeros_count)} tickers. {sum_tickers_with_zero_volume} '
+                  f'with >= one zero volume entry.')
+            print(f'{idx_code}: {len(comp_df) * len(original_zeros_count)} volume entries.'
+                  f' {total_zero_entries} ({(total_zero_entries/(len(comp_df) * len(original_zeros_count)))*100:.1f})% '
+                  f'with zero volume.')
+
+            # print(f'{mkt} zero volume count: {original_zeros_count}')
+
             total_stocks = comp_df.columns.get_level_values(1).nunique()
 
             # Basic plot to get an idea of correct shape
