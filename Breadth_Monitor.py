@@ -155,8 +155,18 @@ def download_components_data(mkt, ticker_list, first, last):
     # Convert the index to DateTimeIndex
     components_df.index = pd.to_datetime(components_df.index)
 
-    # Remove historic zero volumes in idx_df and replace with previous days volume
-    # idx_df['Volume'] = idx_df['Volume'].replace(0, method='ffill')
+    # Find the last date in the DataFrame
+    last_date = components_df.index[-1]
+
+    # Count how many zeros are in the original Volume column
+    original_zeros_count = (components_df['Volume'] == 0).sum()
+    print(f'{mkt} zero volume count: {original_zeros_count}')
+
+    # Remove historic zero volumes in components_df_df and replace with next valid volume (some tickers have all 0s)
+    # components_df['Volume'] = components_df['Volume'].replace(0, pd.NA).fillna(method='bfill')
+
+    # Change NaN back to zero (to keep last zero in column, if present, which will be changed later)
+    # components_df['Volume'] = components_df['Volume'].fillna(0)
 
     components_df.to_csv(f'{data_folder}/EOD_{mkt}.csv')  # , index=False)
     components_df_file_saved = f'{data_folder}/EOD_{mkt}.csv'
@@ -447,6 +457,7 @@ def plot_close_and_volume(df_idx, idx):
     ax1.set_ylabel('Close', color='blue')
     ax1.plot(p1.index, p1['Adj Close'])
     ax1.tick_params(axis='y')
+    ax1.set_yscale('log')
 
     # Set x-ticks and x-tick labels for first y-axis
 
