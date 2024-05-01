@@ -1835,7 +1835,7 @@ for nums in mkt_list:
             print(f'{idx_code}: {total_stocks} tickers. {sum_tickers_with_zero_volume} '
                   f'with >= one zero volume entry.')
             print(f'{idx_code}: {total_stocks * len(comp_df)} volume entries.'
-                  f' {total_zero_entries} ({(total_zero_entries/(total_stocks * len(comp_df))*100):.1f})% '
+                  f' {total_zero_entries} ({(total_zero_entries/(total_stocks * len(comp_df))*100):.1f}%) '
                   f'with zero volume.')
 
             total_stocks = comp_df.columns.get_level_values(1).nunique()
