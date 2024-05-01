@@ -1827,17 +1827,16 @@ for nums in mkt_list:
             # print(sample_idx)
 
             # Count how many zeros are in Volume column (ignore last entry which is often zero)
+            total_stocks = comp_df.columns.get_level_values(1).nunique()
             original_zeros_count = (comp_df.iloc[:-1]['Volume'] == 0).sum()  # original_zeros_count is a series
             sum_tickers_with_zero_volume = original_zeros_count.astype(bool).sum()
             total_zero_entries = original_zeros_count.sum()
 
-            print(f'{idx_code}: {len(original_zeros_count)} tickers. {sum_tickers_with_zero_volume} '
+            print(f'{idx_code}: {total_stocks} tickers. {sum_tickers_with_zero_volume} '
                   f'with >= one zero volume entry.')
-            print(f'{idx_code}: {len(comp_df) * len(original_zeros_count)} volume entries.'
-                  f' {total_zero_entries} ({(total_zero_entries/(len(comp_df) * len(original_zeros_count)))*100:.1f})% '
+            print(f'{idx_code}: {total_stocks * len(comp_df)} volume entries.'
+                  f' {total_zero_entries} ({(total_zero_entries/(total_stocks * len(comp_df))*100):.1f})% '
                   f'with zero volume.')
-
-            # print(f'{mkt} zero volume count: {original_zeros_count}')
 
             total_stocks = comp_df.columns.get_level_values(1).nunique()
 
