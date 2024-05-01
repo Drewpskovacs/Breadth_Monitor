@@ -1838,8 +1838,6 @@ for nums in mkt_list:
                   f' {total_zero_entries} ({(total_zero_entries/(total_stocks * len(comp_df))*100):.1f}%) '
                   f'with zero volume.')
 
-            total_stocks = comp_df.columns.get_level_values(1).nunique()
-
             # Basic plot to get an idea of correct shape
             plot_close_and_volume(idx_df, idx_code)
 
