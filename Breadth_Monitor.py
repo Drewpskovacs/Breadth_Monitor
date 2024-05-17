@@ -1753,6 +1753,28 @@ def plot_table(csv, plot_title):
 
 
 ##########################################################################
+# Get paths for pyInstaller
+##########################################################################
+def get_data_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+data_codes_path = get_data_path(codes_folder)
+data_data_path = get_data_path(data_folder)
+data_pdf_path = get_data_path(pdf_folder)
+
+print(f"Data codes Path: {data_codes_path}")
+print(f"Data data Path: {data_data_path}")
+print(f"Data PDF Path: {data_pdf_path}")
+
+
+##########################################################################
 
 # -----------------------------MAIN PROGRAM-------------------------------
 
