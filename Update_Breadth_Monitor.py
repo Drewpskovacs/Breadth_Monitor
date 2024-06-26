@@ -1892,13 +1892,10 @@ for nums in mkt_list:
                 ##############################
                 # Breadth Monitor Table
                 ##############################
-                stockbee_df = all_dfs_df[['>4%1d', '<4%1d',
-                                          'ratio5', 'ratio10',
-                                          '>25%Q', '<25%Q',
-                                          '>25%M', '<25%M',
-                                          '>50%M', '<50%M',
-                                          '>13%34d', '<13%34d',
+                stockbee_df = all_dfs_df[['ratio5', 'ratio10',
                                           '$>MA40',
+                                          '>4%1d', '>13%34d', '>25%M', '>50%M', '>25%Q',
+                                          '<4%1d', '<13%34d', '<25%M', '<50%M', '<25%Q',
                                           'Adj Close']]
 
                 # Negate columns so that the percentile colours are inverted
@@ -1913,10 +1910,8 @@ for nums in mkt_list:
                 ##############################
                 # Highs and Lows Table
                 ##############################
-                hilo_df = all_dfs_df[['ATH', 'ATL',
-                                      '12MH', '12ML',
-                                      '3MH', '3ML',
-                                      '1MH', '1ML',
+                hilo_df = all_dfs_df[['1MH', '3MH', '12MH', 'ATH',
+                                      '1ML', '3ML', '12ML', 'ATL',
                                       'Adj Close']]
                 hilo_df.to_csv('hilo_df.csv')
                 plot_table('hilo_df.csv', 'Highs and Lows')
@@ -1926,14 +1921,10 @@ for nums in mkt_list:
                 ##############################
                 # Create a copy of the DataFrame to ensure you're working with the original DataFrame
                 short_term_movers = all_dfs_df[['adv_dec_ratio',
-                                                '>4%D', '<4%D',
-                                                '>6%2D', '<6%2D',
-                                                '>7%3D', '<7%3D',
-                                                '>8%4D', '<8%4D',
-                                                '>9%5D', '<9%5D',
-                                                '>10%6D', '<10%6D',
-                                                '>11%7D', '<11%7D',
-                                                '>12%8D', '<12%8D'
+                                                '>4%D', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D',
+                                                '>12%8D',
+                                                '<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D',
+                                                '<12%8D',
                                                 ]].copy()
                 # Negate columns so that the percentile colours are inverted
                 st_columns_to_negate = ['<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D']
