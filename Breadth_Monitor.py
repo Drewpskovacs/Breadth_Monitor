@@ -611,7 +611,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
 
     # Add title and legend
     ax2.set_title(f"{idx} - New Highs minus New Lows")
-    ax2.legend(labels=q1.columns, loc='upper left')  # Use column names for legend labels
+    # ax2.legend(labels=q1.columns, loc='upper left')  # Use column names for legend labels
 
     # Add a horizontal dotted line to show where bottoms might be
     ax2.axhline(y=0, color='black', linestyle='--')
