@@ -518,11 +518,122 @@ def highs_and_lows(df_idx, df_eod, t, idx):
 
     # Creating the High/Low difference DataFrame with the required columns
     hl_diff_df = pd.DataFrame(index=hl_df.index)
-    hl_diff_df['ATH-ATL'] = hl_df['ATH'] - hl_df['ATL']
-    hl_diff_df['12MH-12ML'] = hl_df['12MH'] - hl_df['12ML']
-    hl_diff_df['3MH-3ML'] = hl_df['3MH'] - hl_df['3ML']
-    hl_diff_df['1MH-1ML'] = hl_df['1MH'] - hl_df['1ML']
+    hl_diff_df['ATH-ATL'] = hl_df['ATH'] + hl_df['ATL']
+    hl_diff_df['12MH-12ML'] = hl_df['12MH'] + hl_df['12ML']
+    hl_diff_df['3MH-3ML'] = hl_df['3MH'] + hl_df['3ML']
+    hl_diff_df['1MH-1ML'] = hl_df['1MH'] + hl_df['1ML']
 
+    #############################################################################
+    # PLOTTING
+    #############################################################################
+    # Make new df to extract dates for plotting
+
+    p = hl_df.tail(lookback)
+    q = hl_diff_df.tail(lookback)
+
+    p1 = p.reset_index().rename(columns={'index': 'Date'})
+    q1 = q.reset_index().rename(columns={'index': 'Date'})
+    pidx = idx_c.tail(lookback)
+
+    ######################################################
+    # Plot Summed Highs and Lows vs Close on separate page
+    ######################################################
+
+    fig1, ax1 = plt.subplots(figsize=(17, 12))
+
+    # Define colors for each level 0 label
+    colors = {
+        'ATH': 'deepskyblue',
+        'ATL': 'saddlebrown',
+        '12MH': 'forestgreen',
+        '12ML': 'red',
+        '3MH': 'mediumseagreen',
+        '3ML': 'tomato',
+        '1MH': 'palegreen',
+        '1ML': 'peachpuff'
+    }
+
+    for label in reversed(p1.columns[1:]):
+        ax1.bar(p1.index, p1[label], label=label, color=colors[label])
+
+    ax1.set_ylabel('Number of Highs and Lows')
+
+    date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    # Add title and legend
+    ax1.set_title(f"{idx} - Highs and Lows")
+    ax1.legend(labels=p1.columns, loc='upper left')  # Use column names for legend labels
+
+    # Add a horizontal dotted line to show where bottoms might be
+    ax1.axhline(y=0, color='black', linestyle='--')
+
+    # Add index to other axis
+    ax1_twin = ax1.twinx()
+    ax1_twin.plot(p1.index, pidx, 'black', label=idx, linewidth=2)
+    ax1_twin.set_ylabel(idx, color='black')
+    ax1_twin.set_xticks(p1.index[::xlabel_separation])
+    ax1_twin.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax1_twin.get_legend_handles_labels()
+    ax1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+
+    pdf.savefig(fig1)
+    plt.close(fig1)
+
+    #################################################
+    # Plot Highs minus Lows vs Close on separate page
+    #################################################
+
+    fig2, ax2 = plt.subplots(figsize=(17, 12))
+
+    # Define colors for each level 0 label
+    colors = {
+        'ATH-ATL': 'darkmagenta',
+        '12MH-12ML': 'forestgreen',
+        '3MH-3ML': 'crimson',
+        '1MH-1ML': 'pink'
+    }
+
+    # Plot other columns with thinner lines first
+    for col in ['ATH-ATL', '3MH-3ML', '1MH-1ML']:
+        ax2.plot(q1[col], label=col, linewidth=0.8, color=colors[col])  # Thinner lines for other columns
+
+    # Plot '12MH-12ML' last to bring it to the front
+    ax2.plot(q1['12MH-12ML'], label='12MH-12ML', linewidth=1.6, color='forestgreen')  # Standard line width for
+    # 12MH-12ML
+
+    date_labels = q1['Date'].dt.strftime("%d/%m/%y").tolist()
+    ax2.set_xticks(q1.index[::xlabel_separation])
+    ax2.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    # Add title and legend
+    ax2.set_title(f"{idx} - New Highs minus New Lows")
+    ax2.legend(labels=q1.columns, loc='upper left')  # Use column names for legend labels
+
+    # Add a horizontal dotted line to show where bottoms might be
+    ax2.axhline(y=0, color='black', linestyle='--')
+
+    # Add index to other axis
+    ax2_twin = ax2.twinx()
+    ax2_twin.plot(q1.index, pidx, 'black', label=idx, linewidth=2)
+    ax2_twin.set_ylabel(idx, color='black')
+    ax2_twin.set_xticks(q1.index[::xlabel_separation])
+    ax2_twin.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    lines, labels = ax2.get_legend_handles_labels()
+    lines2, labels2 = ax2_twin.get_legend_handles_labels()
+    ax2_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+
+    pdf.savefig(fig2)
+    plt.close(fig2)
+
+    # Combine hl_df and hl_diff_df into hl&diff_df
+    hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
+
+    return hl_and_diff_df
     #############################################################################
     # PLOTTING
     #############################################################################
@@ -616,7 +727,10 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     pdf.savefig()
     plt.close()
 
-    return hl_df
+    # Combine hl_df and hl_diff_df into hl&diff_df
+    hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
+
+    return hl_and_diff_df
 
 
 ##########################################################################
@@ -1954,6 +2068,7 @@ for nums in mkt_list:
             ##############################
             hilo_df = all_dfs_df[['1MH', '3MH', '12MH', 'ATH',
                                   '1ML', '3ML', '12ML', 'ATL',
+                                  'ATH-ATL', '12MH-12ML', '3MH-3ML',
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
             plot_table('hilo_df.csv', 'Highs and Lows')
