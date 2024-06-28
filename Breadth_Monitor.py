@@ -506,8 +506,8 @@ def highs_and_lows(df_idx, df_eod, t, idx):
         df2[('1ML', col)] = -(eod_c[col] <= rolling_1m_low[col]).astype(int)
 
     # Display the resulting DataFrame df2
-    print("df2:")
-    print(df2)
+    #print("df2:")
+    #print(df2)
 
     # Group by level 0 and sum within each group
     hl_df = df2.T.groupby(level=0, sort=False).sum().T
@@ -1174,7 +1174,11 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     ###########################
     # Plot McClellan Oscillator
     ###########################
-    axs[2].plot(p6.index, p6, color='b', alpha=0.7, label='McClellan Oscillator')
+
+    # Create bars for McClellan Oscillator, with color depending on value
+    colors = ['green' if val > 0 else 'red' for val in p6]
+
+    axs[2].bar(p6.index, p6, color=colors, alpha=0.7, label='McClellan Oscillator')
     axs[2].set_ylabel('McClellan Oscillator', color='black')
     axs[2].set_title(f'{idx} - McClellan Oscillator')
 
@@ -1664,6 +1668,9 @@ def ratios(df4, df13, idx, df_close_idx):
     axs[1].set_ylabel('13/34 ratio')
     # Add title for plot
     axs[1].set_title(f"{idx} - No. tickers up 13% in 34 days minus No. tickers down 13% in 34 days")
+
+    # Add a horizontal line at 0
+    axs[1].axhline(y=0, color='red', linestyle='--', linewidth=1.5)
 
     # Combine legends for axs[] and axs[]_twin into a single legend
     lines, labels = axs[1].get_legend_handles_labels()
