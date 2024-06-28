@@ -505,6 +505,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
         df2[('1MH', col)] = (eod_c[col] >= rolling_1m_high[col]).astype(int)
         df2[('1ML', col)] = -(eod_c[col] <= rolling_1m_low[col]).astype(int)
 
+
     # Display the resulting DataFrame df2
     # print(df2)
 
@@ -894,13 +895,14 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     # Calculate the cumulative sum of difference
     # ##########################################
     adv_dec_diff = (advancing_stocks - declining_stocks)
+    #  print(type(adv_dec_diff)) This is a series
     adv_dec_cum_diff = adv_dec_diff.cumsum()
     # Rename the columns
     adv_dec_cum_diff = adv_dec_cum_diff.rename("adv_dec_cum_diff")
     # print(adv_dec_cum_diff.tail(20))
 
     # Create a DataFrame
-    data = {'Advancing': advancing_stocks, 'Declining': declining_stocks}
+    data = {'Advancing': advancing_stocks, 'Declining': declining_stocks, 'A/D_diff': adv_dec_diff}
     df = pd.DataFrame(data)
 
     # Calculate the 19-day and 39-day EMAs for advancing and declining stocks
@@ -909,8 +911,13 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     df['Advancing_EMA_39'] = df['Advancing'].ewm(span=39, adjust=False).mean()
     df['Declining_EMA_39'] = df['Declining'].ewm(span=39, adjust=False).mean()
 
+    df['A/D_diff_EMA_19'] = df['A/D_diff'].ewm(span=19, adjust=False).mean()
+    df['A/D_diff_EMA_39'] = df['A/D_diff'].ewm(span=39, adjust=False).mean()
+
     # Calculate the McClellan Oscillator
-    df['McClellan_Oscillator'] = df['Advancing_EMA_19'] - df['Declining_EMA_39']
+
+    #  df['McClellan_Oscillator'] = df['Advancing_EMA_19'] - df['Declining_EMA_39']
+    df['McClellan_Oscillator'] = df['A/D_diff_EMA_19'] - df['A/D_diff_EMA_39']
 
     # Display the DataFrame with the McClellan Oscillator
     # print(df)
