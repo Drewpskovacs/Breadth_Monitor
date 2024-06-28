@@ -505,12 +505,23 @@ def highs_and_lows(df_idx, df_eod, t, idx):
         df2[('1MH', col)] = (eod_c[col] >= rolling_1m_high[col]).astype(int)
         df2[('1ML', col)] = -(eod_c[col] <= rolling_1m_low[col]).astype(int)
 
-
     # Display the resulting DataFrame df2
-    # print(df2)
+    print("df2:")
+    print(df2)
 
     # Group by level 0 and sum within each group
     hl_df = df2.T.groupby(level=0, sort=False).sum().T
+
+    # Display the resulting DataFrame hl_df
+    # print("hl_df:")
+    #print(hl_df)
+
+    # Creating the High/Low difference DataFrame with the required columns
+    hl_diff_df = pd.DataFrame(index=hl_df.index)
+    hl_diff_df['ATH-ATL'] = hl_df['ATH'] - hl_df['ATL']
+    hl_diff_df['12MH-12ML'] = hl_df['12MH'] - hl_df['12ML']
+    hl_diff_df['3MH-3ML'] = hl_df['3MH'] - hl_df['3ML']
+    hl_diff_df['1MH-1ML'] = hl_df['1MH'] - hl_df['1ML']
 
     #############################################################################
     # PLOTTING
@@ -518,10 +529,18 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     # Make new df to extract dates for plotting
 
     p = hl_df.tail(lookback)
+    q = hl_diff_df.tail(lookback)
+
     p1 = p.reset_index().rename(columns={'index': 'Date'})
+    q1 = q.reset_index().rename(columns={'index': 'Date'})
     pidx = idx_c.tail(lookback)
 
-    fig, ax = plt.subplots(figsize=(17, 12))
+    # fig, ax = plt.subplots(figsize=(17, 12))
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(17, 12))
+
+    #######################################
+    # Plot Summed Highs and Lows vs Close
+    #######################################
 
     # Define colors for each level 0 label
     colors = {
@@ -536,31 +555,61 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     }
 
     for label in reversed(p1.columns[1:]):
-        plt.bar(p1.index, p1[label], label=label, color=colors[label])
+        axs[0].bar(p1.index, p1[label], label=label, color=colors[label])
 
-    ax.set_ylabel('Number of Highs and Lows')
+    axs[0].set_ylabel('Number of Highs and Lows')
 
     date_labels = p1['Date'].dt.strftime("%d/%m/%y").tolist()
-    ax.set_xticks(p1.index[::xlabel_separation])
-    ax.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+    axs[0].set_xticks(p1.index[::xlabel_separation])
+    axs[0].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
     # Add title and legend
-    plt.title(f"{idx} - Highs and Lows")
-    # plt.legend(labels=p1.columns, loc='upper left')  # Use column names for legend labels
+    axs[0].set_title(f"{idx} - Highs and Lows")
+    axs[0].legend(labels=p1.columns, loc='upper left')  # Use column names for legend labels
 
     # Add a horizontal dotted line to show where bottoms might be
-    ax.axhline(y=0, color='black', linestyle='--')
+    axs[0].axhline(y=0, color='black', linestyle='--')
 
     # Add index to other axis
-    ax3 = ax.twinx()
-    ax3.plot(p1.index, pidx, 'black', label=idx, linewidth=2)
-    ax3.set_ylabel(idx, color='black')
-    ax3.set_xticks(p1.index[::xlabel_separation])
-    ax3.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+    axs0_twin = axs[0].twinx()
+    axs0_twin.plot(p1.index, pidx, 'black', label=idx, linewidth=2)
+    axs0_twin.set_ylabel(idx, color='black')
+    axs0_twin.set_xticks(p1.index[::xlabel_separation])
+    axs0_twin.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
 
-    lines, labels = ax.get_legend_handles_labels()
-    lines2, labels2 = ax3.get_legend_handles_labels()
-    ax3.legend(lines + lines2, labels + labels2, loc='upper left')
+    lines, labels = axs[0].get_legend_handles_labels()
+    lines2, labels2 = axs0_twin.get_legend_handles_labels()
+    axs0_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+
+    ################################
+    # Plot Highs minus Lows vs Close
+    ################################
+
+    for col in ['ATH-ATL', '12MH-12ML', '3MH-3ML', '1MH-1ML']:
+        axs[1].plot(q1[col], label=col)
+
+    date_labels = q1['Date'].dt.strftime("%d/%m/%y").tolist()
+    axs[1].set_xticks(q1.index[::xlabel_separation])
+    axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    # Add title and legend
+    axs[1].set_title(f"{idx} - New Highs minus New Lows")
+    axs[1].legend(labels=q1.columns, loc='upper left')  # Use column names for legend labels
+
+    # Add a horizontal dotted line to show where bottoms might be
+    axs[1].axhline(y=0, color='black', linestyle='--')
+
+    # Add index to other axis
+    axs1_twin = axs[1].twinx()
+    axs1_twin.plot(q1.index, pidx, 'black', label=idx, linewidth=2)
+    axs1_twin.set_ylabel(idx, color='black')
+    axs1_twin.set_xticks(q1.index[::xlabel_separation])
+    axs1_twin.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    lines, labels = axs[1].get_legend_handles_labels()
+    lines2, labels2 = axs1_twin.get_legend_handles_labels()
+    axs1_twin.legend(lines + lines2, labels + labels2, loc='upper left')
+
 
     # plt.savefig(f'{plots_folder}/{idx}_highs_lows.jpg')
     # plt.show(block=False)
