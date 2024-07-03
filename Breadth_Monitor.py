@@ -98,7 +98,7 @@ def get_user_choice():
     print('Update: 1, Use existing data: 2 or Create new databases: 3')
     while True:
         try:
-            user_choice = int(input('Enter your choice (1: update, 2: use as is, or 3: download new): '))
+            user_choice = int(input('Enter your choice (1: update, 2: use as is, or 3: download new): ') or 1)
             if user_choice in [1, 2, 3]:
                 return user_choice  # Return the value if it's valid
             else:
@@ -113,7 +113,7 @@ def get_user_choice():
 def get_lookback():
     while True:
         try:
-            lookback_period = int(input("Days to look back (510 default): ") or 510)
+            lookback_period = int(input("Days to look back (1000 default): ") or 1000)
             return lookback_period  # Return the lookback value if the input is successfully converted to an integer
         except ValueError:
             print("Invalid input. Please enter an integer.")
@@ -505,16 +505,8 @@ def highs_and_lows(df_idx, df_eod, t, idx):
         df2[('1MH', col)] = (eod_c[col] >= rolling_1m_high[col]).astype(int)
         df2[('1ML', col)] = -(eod_c[col] <= rolling_1m_low[col]).astype(int)
 
-    # Display the resulting DataFrame df2
-    #print("df2:")
-    #print(df2)
-
     # Group by level 0 and sum within each group
     hl_df = df2.T.groupby(level=0, sort=False).sum().T
-
-    # Display the resulting DataFrame hl_df
-    # print("hl_df:")
-    #print(hl_df)
 
     # Creating the High/Low difference DataFrame with the required columns
     hl_diff_df = pd.DataFrame(index=hl_df.index)
@@ -522,6 +514,9 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     hl_diff_df['12MH-12ML'] = hl_df['12MH'] + hl_df['12ML']
     hl_diff_df['3MH-3ML'] = hl_df['3MH'] + hl_df['3ML']
     hl_diff_df['1MH-1ML'] = hl_df['1MH'] + hl_df['1ML']
+
+    # Combine hl_df and hl_diff_df into hl&diff_df
+    hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
 
     #############################################################################
     # PLOTTING
@@ -630,10 +625,11 @@ def highs_and_lows(df_idx, df_eod, t, idx):
     pdf.savefig(fig2)
     plt.close(fig2)
 
-    # Combine hl_df and hl_diff_df into hl&diff_df
-    hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
+    """# Combine hl_df and hl_diff_df into hl&diff_df
+    # hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
 
-    return hl_and_diff_df
+    # return hl_and_diff_df
+    
     #############################################################################
     # PLOTTING
     #############################################################################
@@ -729,6 +725,7 @@ def highs_and_lows(df_idx, df_eod, t, idx):
 
     # Combine hl_df and hl_diff_df into hl&diff_df
     hl_and_diff_df = pd.concat([hl_df, hl_diff_df], axis=1)
+"""
 
     return hl_and_diff_df
 
@@ -1182,11 +1179,6 @@ def advance_decline_ratio(df_close, df_close_idx, idx):
     axs[2].set_ylabel('McClellan Oscillator', color='black')
     axs[2].set_title(f'{idx} - McClellan Oscillator')
 
-    ''' # Set y-axis limits to the range of accumulated volume checking for NaN or Inf
-    valid_values = p5[~np.isnan(p5) & ~np.isinf(p5)]
-    if len(valid_values) > 0:
-        axs[1].set_ylim(bottom=min(valid_values), top=max(valid_values))'''
-
     # Add a horizontal line at 0
     axs[2].axhline(y=0, color='blue', linestyle='--', linewidth=1.5)
 
@@ -1229,7 +1221,14 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
 
     # Calculate the percent difference between markets entire volume
     # Replace zeros with the previous non-zero value
-    df_vol.replace(0, method='ffill', inplace=True)
+    """# df_vol.replace(0, method='ffill', inplace=True) # This is the code that gives the future warning
+    # df_vol.fillna(method='ffill', inplace=True)  # Also gives errors"""
+
+    # If df_vol is a slice of another DataFrame, make a copy first
+    df_vol = df_vol.copy()
+
+    # Forward fill missing values
+    df_vol.ffill(inplace=True)
 
     total_mkt_vol = df_vol.sum(axis=1).rename('MktVol')
     mkt_vol_pct_chg_1 = total_mkt_vol.pct_change().mul(100)  # series
@@ -1250,7 +1249,9 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     # date_labels_vpct = p_2.index.tolist()
     p2 = p_2.reset_index(drop=True)
     # Backfill NaN values in p2['Vol%chg']
-    p2['MktVol'] = p2['MktVol'].fillna(method='backfill')
+    # p2['MktVol'] = p2['MktVol'].fillna(method='backfill')  # Deprecated approach
+    # Recommended approach (future-proof and explicit):
+    p2['MktVol'] = p2['MktVol'].bfill()
 
     p_idx = df_close_idx.tail(lookback)
     pidx = p_idx.reset_index(drop=True)
@@ -1292,11 +1293,6 @@ def accumulated_volume(df_close, df_vol, idx, df_close_idx):  # eod_df['Adj Clos
     axs[1].set_xticklabels(date_labels_vpct[::xlabel_separation], rotation=45, ha='right')
     axs[1].set_ylabel('Vol % change', color='black')
 
-    """# Check if p2['Vol%chg'] is not empty
-    if not p2['Vol%chg'].empty:
-        # Set y-axis limits
-        axs[1].set_ylim(bottom=min(p2['Vol%chg']), top=max(p2['Vol%chg']))"""
-
     axs[1].set_title("Day to day % volume change")
 
     # Plot index
@@ -1328,11 +1324,13 @@ def movers(df_close, idx, df_close_idx):
     # print(df_idx.tail(lookback))
 
     # Fill NaN values in the DataFrame before calculating percentage changes
-    df_filled = df_close.ffill()
+    df_filled = df_close.ffill()  # FutureWarning error
+    # df_filled = df_close.copy()
+    # df_filled.ffill(inplace=True)
 
     # Define the conditions
-    c4plus = df_filled.pct_change() >= 0.04
-    c4minus = df_filled.pct_change() <= -0.04
+    c4plus = df_filled.pct_change(fill_method=None) >= 0.04
+    c4minus = df_filled.pct_change(fill_method=None) <= -0.04
     c25_3plus = df_filled.pct_change(periods=63) >= 0.25
     c25_3minus = df_filled.pct_change(periods=63) <= -0.25
     c25_1plus = df_filled.pct_change(periods=21) >= 0.25
@@ -1696,14 +1694,6 @@ def plot_normalized_indexes(mkt_dict, idx):
     # Extract 'idx_code' values from the filtered dictionary
     idx_code_list = [value['idx_code'] for value in mkt_dict.values()]
 
-    """# Specify the reference ('^BVSP') CSV file
-    ref_csv_file = f"{data_folder}/INDEX_{idx}.csv"
-
-    # Read the reference CSV file to get the 'Adj Close' column
-    combined_df = pd.read_csv(ref_csv_file, usecols=['Date', 'Adj Close'], index_col='Date', parse_dates=True)
-    combined_df.index = pd.to_datetime(combined_df.index)
-    combined_df.rename(columns={'Adj Close': idx}, inplace=True)"""
-
     # Initialize combined_df before the loop
     combined_df = pd.DataFrame()
 
@@ -1822,14 +1812,6 @@ def plot_normalized_indexes_minus_btc(mkt_dict, idx):
     date_labels = p_1.index.strftime("%d/%m/%y").tolist()
     p1 = p_1.reset_index(drop=True)
 
-    # Checks cos of "ValueError: Axis limits cannot be NaN or Inf"
-    # print(f'Check {idx_code} for NaN {p1.isnull().sum().sum()}')  # Check for NaN
-    # print(f'Check {idx_code} for Inf {np.isinf(p1).sum().sum()}')  # Check for Inf
-
-    # Calculate the maximum and minimum values in the DataFrame columns
-    # max_value = p1.max().max()
-    # min_value = p1.min().min()
-
     # Create a figure and axis
     fig, ax1 = plt.subplots(figsize=(17, 12))
 
@@ -1929,20 +1911,52 @@ def plot_table(csv, plot_title):
     plt.close()
 
 
+#######################################################
+# Get action, market list to use and lookback period
+#######################################################
+def get_user_inputs():
+    print('What do you want to do?')
+    print('Change inputs: 1, Basic: 2')
+    while True:
+        try:
+            action = int(input('Enter your choice: 1 (change variables), 2 (use as is = default): ') or 2)
+            if action == 1:
+                # Work with all indices or just one?
+                market_list = get_market_map(yahoo_idx_components_dictionary)
+
+                # What do you want to do? Update, use or download new data?
+                update_use_download = get_user_choice()
+
+                # Define how far to look back on graphs and database start/end
+                lookback_period = get_lookback()
+
+                break  # Exit the loop after valid input
+
+            elif action == 2:
+                market_list = yahoo_idx_components_dictionary
+                update_use_download = 1
+                lookback_period = 756  # 252*3yrs
+
+                break  # Exit the loop after valid input
+
+            else:
+                print('Invalid choice. Please enter 1 or 2')
+
+        except ValueError:
+            print('Invalid input. 1 = update, 2 = use as is')
+
+    return market_list, update_use_download, lookback_period
+
+
 ##########################################################################
 
 # -----------------------------MAIN PROGRAM-------------------------------
 
 ##########################################################################
 
-# Work with all indices or just one?
-mkt_list = get_market_map(yahoo_idx_components_dictionary)
+# Get user defined inputs
+mkt_list, up_use_dl, lookback = get_user_inputs()
 
-# What do you want to do? Update, use or download new data?
-up_use_dl = get_user_choice()
-
-# Define how far to look back on graphs and database start/end
-lookback = get_lookback()
 from_date = "2000-01-01"
 until_date = download_until()
 number_xlabels = 50
@@ -1986,13 +2000,6 @@ for nums in mkt_list:
             #  This is required because we are in a new loop and idx/eod_df are undefined
             idx_df = pd.read_csv(f'{data_folder}/INDEX_{idx_code}.csv', index_col=0, parse_dates=True)
             comp_df = pd.read_csv(f'{data_folder}/EOD_{market_name}.csv', header=[0, 1], index_col=0, parse_dates=True)
-
-            # print(f'First and last 3 rows of components df ({market_name}):')
-            # sample_mkt = pd.concat([comp_df.head(1), comp_df.tail(1)])
-            # print(sample_mkt)
-            # print(f"First and last 3 rows of index df [{idx_code}]:")
-            # sample_idx = pd.concat([idx_df.head(1), idx_df.tail(1)])
-            # print(sample_idx)
 
             # Count how many zeros are in Volume column (ignore last entry which is often zero)
             total_stocks = comp_df.columns.get_level_values(1).nunique()
