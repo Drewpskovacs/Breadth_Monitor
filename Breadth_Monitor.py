@@ -61,6 +61,8 @@ time_periods = [252, 63, 21]  # 1 year, 3 months and 1 month
 rows = 20
 percentiles = [0, 0.1, 0.2, 0.8, 0.9]
 percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
+# Rows to use for ranking calculations
+selection_for_ranking = 300
 
 
 # -----------------------------FUNCTIONS----------------------------------
@@ -113,7 +115,7 @@ def get_user_choice():
 def get_lookback():
     while True:
         try:
-            lookback_period = int(input("Days to look back (1000 default): ") or 1000)
+            lookback_period = int(input("Days to look back (756/~3yr default): ") or 756)
             return lookback_period  # Return the lookback value if the input is successfully converted to an integer
         except ValueError:
             print("Invalid input. Please enter an integer.")
@@ -755,6 +757,78 @@ def calculate_moving_averages(df_close, mas, label):
 
 
 ##########################################################################
+# Create df of exp moving averages for Traders Eden
+##########################################################################
+
+def calculate_traders_edens(df_close, idx_data, idx):
+    ma_list = []
+
+    # Calculate EMAs
+    ma8 = df_close.ewm(span=8, min_periods=0, adjust=False, ignore_na=False).mean().round(2)
+    ma80 = df_close.ewm(span=80, min_periods=0, adjust=False, ignore_na=False).mean().round(2)
+
+    # Create MultiIndex columns
+    ma8.columns = pd.MultiIndex.from_product([['MA8'], df_close.columns], names=['MA8', 'Code'])
+    ma80.columns = pd.MultiIndex.from_product([['MA80'], df_close.columns], names=['MA80', 'Code'])
+
+    # Concatenate the DataFrames along columns
+    te_ma_df = pd.concat([ma8, ma80], axis=1)
+
+    # Calculate EMA direction:
+    ma8_dir = np.sign(te_ma_df["MA8"].diff())
+    ma80_dir = np.sign(te_ma_df["MA80"].diff())
+
+    # Initialize new traders eden df with zeros, same index and columns as ma8_dir and ma80_dir
+    df_te = pd.DataFrame(0, index=ma8_dir.index, columns=ma8_dir.columns)
+
+    for col in ma8_dir.columns:
+        mask_if_both_1 = (ma8_dir[col] == 1) & (ma80_dir[col] == 1)
+        mask_if_both_neg1 = (ma8_dir[col] == -1) & (ma80_dir[col] == -1)
+
+        df_te.loc[mask_if_both_1, col] = 1
+        df_te.loc[mask_if_both_neg1, col] = -1
+
+    # Calculate Eden_Up and Eden_Down
+    eden_df = pd.DataFrame(index=df_te.index)
+    eden_df['Eden_Up'] = df_te.eq(1).sum(axis=1)
+    eden_df['Eden_Down'] = -df_te.eq(-1).sum(axis=1)
+    eden_df[idx] = idx_data.round(0)
+
+    #############################################
+    # Plotting
+    #############################################
+    p1 = eden_df.tail(lookback)
+    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    start_date = p1.index[0].strftime('%d/%m/%y')  # First index value as start date
+    end_date = p1.index[-1].strftime('%d/%m/%y')  # Last index value as end date
+    p1 = p1.reset_index(drop=True)
+
+    fig, ax1 = plt.subplots(figsize=(17, 12))
+
+    ax1.bar(p1.index, p1['Eden_Up'], color='palegreen', label='Eden_Up')
+    ax1.bar(p1.index, p1['Eden_Down'], color='lightcoral', label='Eden_Down')
+    ax1.set_xlabel('Date')
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+    ax1.set_ylabel('Count')
+    ax1.set_title(f"{idx} - Number of stocks in Traders Eden. +ve = Bull and -ve = Bear")
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(p1.index, p1[idx], color='black', label=idx)
+    ax2.set_ylabel(idx)
+    ax2.legend(loc='upper right')
+
+    # Set x-ticks and x-tick labels for the second y-axis
+
+
+    pdf.savefig()
+    plt.close()
+
+    return eden_df
+
+
+##########################################################################
 # Distance from MA to Close
 ##########################################################################
 def difference_close_to_ma(df_close, df_close_idx, ma_df, idx):
@@ -870,11 +944,11 @@ def close_over_mas(df_mas, label, df_close_idx, idx):
     over_high_mas = high_mas[high_mas > 0].fillna(0)
 
     # Make sums of above
-    over_low_mas_sum = over_low_mas.T.groupby(level=0, sort=False).sum().T
+    over_low_mas_sum = over_low_mas.T.groupby(level=0, sort=False).sum().T.astype(int)
     over_low_mas_sum_pct = (over_low_mas_sum / total_stocks * 100).round(1)
-    over_mid_ma_sum = over_mid_ma.T.groupby(level=0, sort=False).sum().T
+    over_mid_ma_sum = over_mid_ma.T.groupby(level=0, sort=False).sum().T.astype(int)
     over_mid_ma_sum_pct = (over_mid_ma_sum / total_stocks * 100).round(1)
-    over_high_mas_sum = over_high_mas.T.groupby(level=0, sort=False).sum().T
+    over_high_mas_sum = over_high_mas.T.groupby(level=0, sort=False).sum().T.astype(int)
     over_high_mas_sum_pct = (over_high_mas_sum / total_stocks * 100).round(1)
 
     # Change column names
@@ -1324,11 +1398,23 @@ def movers(df_close, idx, df_close_idx):
     # print(df_idx.tail(lookback))
 
     # Fill NaN values in the DataFrame before calculating percentage changes
-    df_filled = df_close.ffill()  # FutureWarning error
+    # df_filled = df_close.ffill()  # FutureWarning error
     # df_filled = df_close.copy()
     # df_filled.ffill(inplace=True)
-
+    # df_close.ffill().pct_change
     # Define the conditions
+    c4plus = df_close.ffill().pct_change() >= 0.04
+    c4minus = df_close.ffill().pct_change() <= -0.04
+    c25_3plus = df_close.ffill().pct_change(periods=63) >= 0.25
+    c25_3minus = df_close.ffill().pct_change(periods=63) <= -0.25
+    c25_1plus = df_close.ffill().pct_change(periods=21) >= 0.25
+    c25_1minus = df_close.ffill().pct_change(periods=21) <= -0.25
+    c50_1plus = df_close.ffill().pct_change(periods=21) >= 0.50
+    c50_1minus = df_close.ffill().pct_change(periods=21) <= -0.50
+    c13_34plus = df_close.ffill().pct_change(periods=34) >= 0.13
+    c13_34minus = df_close.ffill().pct_change(periods=34) <= -0.13
+
+    """# Define the conditions
     c4plus = df_filled.pct_change(fill_method=None) >= 0.04
     c4minus = df_filled.pct_change(fill_method=None) <= -0.04
     c25_3plus = df_filled.pct_change(periods=63) >= 0.25
@@ -1338,7 +1424,7 @@ def movers(df_close, idx, df_close_idx):
     c50_1plus = df_filled.pct_change(periods=21) >= 0.50
     c50_1minus = df_filled.pct_change(periods=21) <= -0.50
     c13_34plus = df_filled.pct_change(periods=34) >= 0.13
-    c13_34minus = df_filled.pct_change(periods=34) <= -0.13
+    c13_34minus = df_filled.pct_change(periods=34) <= -0.13"""
 
     # Create the new dataframe
     movers_df = pd.concat([c4plus, c4minus,
@@ -1356,7 +1442,7 @@ def movers(df_close, idx, df_close_idx):
     movers_df = movers_df.astype(int)
 
     # Group by the first level of columns and sum along the rows
-    breadth_df_summed = movers_df.T.groupby(level=0, sort=False).sum().T
+    breadth_df_summed = movers_df.T.groupby(level=0, sort=False).sum().T.astype(int)
     # For 5 and 10 day ratios
     c4_df = breadth_df_summed[['>4%1d', '<4%1d']]
     c13_df = breadth_df_summed[['>13%34d', '<13%34d']]
@@ -1365,7 +1451,23 @@ def movers(df_close, idx, df_close_idx):
     # Short term movers
     #################################################
 
-    b_plus = df_filled.pct_change(periods=2) >= 0.06
+    b_plus = df_close.ffill().pct_change(periods=2) >= 0.06
+    b_minus = df_close.ffill().pct_change(periods=2) <= -0.06
+    c_plus = df_close.ffill().pct_change(periods=3) >= 0.07
+    c_minus = df_close.ffill().pct_change(periods=3) <= -0.07
+    d_plus = df_close.ffill().pct_change(periods=4) >= 0.08
+    d_minus = df_close.ffill().pct_change(periods=4) <= -0.08
+    e_plus = df_close.ffill().pct_change(periods=5) >= 0.09
+    e_minus = df_close.ffill().pct_change(periods=5) <= -0.09
+    f_plus = df_close.ffill().pct_change(periods=6) >= 0.1
+    f_minus = df_close.ffill().pct_change(periods=6) <= -0.1
+    g_plus = df_close.ffill().pct_change(periods=7) >= 0.11
+    g_minus = df_close.ffill().pct_change(periods=7) <= -0.11
+    h_plus = df_close.ffill().pct_change(periods=8) >= 0.12
+    h_minus = df_close.ffill().pct_change(periods=8) <= -0.12
+
+
+    """b_plus = df_filled.pct_change(periods=2) >= 0.06
     b_minus = df_filled.pct_change(periods=2) <= -0.06
     c_plus = df_filled.pct_change(periods=3) >= 0.07
     c_minus = df_filled.pct_change(periods=3) <= -0.07
@@ -1378,7 +1480,7 @@ def movers(df_close, idx, df_close_idx):
     g_plus = df_filled.pct_change(periods=7) >= 0.11
     g_minus = df_filled.pct_change(periods=7) <= -0.11
     h_plus = df_filled.pct_change(periods=8) >= 0.12
-    h_minus = df_filled.pct_change(periods=8) <= -0.12
+    h_minus = df_filled.pct_change(periods=8) <= -0.12"""
 
     # Create the new dataframe
     st_movers_df = pd.concat([c4plus, c4minus,
@@ -1404,7 +1506,7 @@ def movers(df_close, idx, df_close_idx):
     st_movers_df = st_movers_df.astype(int)
 
     # Group by the first level of columns and sum along the rows
-    st_breadth_df_summed = st_movers_df.T.groupby(level=0, sort=False).sum().T
+    st_breadth_df_summed = st_movers_df.T.groupby(level=0, sort=False).sum().T.astype(int)
 
     #############################################################################
     # PLOTTING
@@ -1859,8 +1961,9 @@ def plot_normalized_indexes_minus_btc(mkt_dict, idx):
 ##########################################################################
 def plot_table(csv, plot_title):
 
+    global selection_for_ranking
+
     rows_on_page = 54
-    selection_for_ranking = 300
 
     df = pd.read_csv(csv, index_col=0, header=0)
     # Round all numbers in the DataFrame to two decimal places
@@ -1915,35 +2018,40 @@ def plot_table(csv, plot_title):
 # Get action, market list to use and lookback period
 #######################################################
 def get_user_inputs():
+    """
+    Prompts the user for configuration options.
+    Returns: A tuple containing (market_list, update_use_download, lookback_period)
+    """
+    # Setting default values to avoid: Local variable 'xxx' might be referenced before assignment
+    market_list = 1
+    update_use_download = 1
+    lookback_period = 756
+
     print('What do you want to do?')
-    print('Change inputs: 1, Basic: 2')
-    while True:
+    print('Change inputs: 1, Auto-update: 2')
+    while True:  # Will execute until finds a <break>
         try:
-            action = int(input('Enter your choice: 1 (change variables), 2 (use as is = default): ') or 2)
+            action = int(input('Enter your choice (1 or 2): ') or 2)
+            if action not in (1, 2):
+                print('Invalid choice. Please enter 1 or 2')
+                continue
+
             if action == 1:
                 # Work with all indices or just one?
                 market_list = get_market_map(yahoo_idx_components_dictionary)
-
-                # What do you want to do? Update, use or download new data?
+                # Update, use actual data, or download new data?
                 update_use_download = get_user_choice()
-
                 # Define how far to look back on graphs and database start/end
                 lookback_period = get_lookback()
-
-                break  # Exit the loop after valid input
-
-            elif action == 2:
+            else:
                 market_list = yahoo_idx_components_dictionary
                 update_use_download = 1
-                lookback_period = 756  # 252*3yrs
+                lookback_period = 756  # 252*3yrs (explanation in docstring)
 
-                break  # Exit the loop after valid input
-
-            else:
-                print('Invalid choice. Please enter 1 or 2')
+            break  # Exit loop after valid input
 
         except ValueError:
-            print('Invalid input. 1 = update, 2 = use as is')
+            print('Invalid input. Enter 1 (manual) or 2 (auto)')
 
     return market_list, update_use_download, lookback_period
 
@@ -2022,6 +2130,10 @@ for nums in mkt_list:
 
             # Multiindex dataframe with all tickers and their MA's: 5, 12, 25, 40, 50, 100, 200
             mov_avgs_df = calculate_moving_averages(comp_df['Adj Close'], mas_to_use, 'Close')
+
+            # Multiindex dataframe with all tickers and their Traders Eden EMA's: 8, 80.
+            traders_eden_mas = calculate_traders_edens(comp_df['Adj Close'],idx_df['Close'], idx_code)
+
             # Dataframe of the sum of average difference between MAs and close for whole market
             ma_c_diff_df = difference_close_to_ma(comp_df['Adj Close'], idx_df['Adj Close'], mov_avgs_df, idx_code)
 
@@ -2094,6 +2206,7 @@ for nums in mkt_list:
             short_term_movers = all_dfs_df[['adv_dec_ratio',
                                             '>4%D', '>6%2D', '>7%3D', '>8%4D', '>9%5D', '>10%6D', '>11%7D', '>12%8D',
                                             '<4%D', '<6%2D', '<7%3D', '<8%4D', '<9%5D', '<10%6D', '<11%7D', '<12%8D',
+                                            'Adj Close'
                                             ]].copy()
 
             # Negate columns so that the percentile colours are inverted
