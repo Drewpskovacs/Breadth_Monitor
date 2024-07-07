@@ -62,7 +62,7 @@ rows = 20
 percentiles = [0, 0.1, 0.2, 0.8, 0.9]
 percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
 # Rows to use for ranking calculations
-selection_for_ranking = 300
+sample_size_for_ranking = 300
 
 
 # -----------------------------FUNCTIONS----------------------------------
@@ -761,7 +761,6 @@ def calculate_moving_averages(df_close, mas, label):
 ##########################################################################
 
 def calculate_traders_edens(df_close, idx_data, idx):
-    ma_list = []
 
     # Calculate EMAs
     ma8 = df_close.ewm(span=8, min_periods=0, adjust=False, ignore_na=False).mean().round(2)
@@ -799,8 +798,6 @@ def calculate_traders_edens(df_close, idx_data, idx):
     #############################################
     p1 = eden_df.tail(lookback)
     date_labels = p1.index.strftime("%d/%m/%y").tolist()
-    start_date = p1.index[0].strftime('%d/%m/%y')  # First index value as start date
-    end_date = p1.index[-1].strftime('%d/%m/%y')  # Last index value as end date
     p1 = p1.reset_index(drop=True)
 
     fig, ax1 = plt.subplots(figsize=(17, 12))
@@ -820,7 +817,6 @@ def calculate_traders_edens(df_close, idx_data, idx):
     ax2.legend(loc='upper right')
 
     # Set x-ticks and x-tick labels for the second y-axis
-
 
     pdf.savefig()
     plt.close()
@@ -1466,7 +1462,6 @@ def movers(df_close, idx, df_close_idx):
     h_plus = df_close.ffill().pct_change(periods=8) >= 0.12
     h_minus = df_close.ffill().pct_change(periods=8) <= -0.12
 
-
     """b_plus = df_filled.pct_change(periods=2) >= 0.06
     b_minus = df_filled.pct_change(periods=2) <= -0.06
     c_plus = df_filled.pct_change(periods=3) >= 0.07
@@ -1959,18 +1954,15 @@ def plot_normalized_indexes_minus_btc(mkt_dict, idx):
 ##########################################################################
 # Plot a table
 ##########################################################################
-def plot_table(csv, plot_title):
+def plot_table_and_score(csv, plot_title, idx):
 
-    global selection_for_ranking
+    global sample_size_for_ranking
 
     rows_on_page = 54
 
     df = pd.read_csv(csv, index_col=0, header=0)
     # Round all numbers in the DataFrame to two decimal places
     df = df.round(2)
-    # print('Raw tail of df:')
-    # print(df.tail(10))
-    # print(df.shape)
 
     # Remove nan and inf
     max_val = df.apply(lambda df_col: df_col[df_col != np.inf].max())
@@ -1981,20 +1973,25 @@ def plot_table(csv, plot_title):
     # Replace remaining NaN values with 0
     df.fillna(0, inplace=True)
 
-    # Select the tail size to get the best ranking.
-    df = df.tail(selection_for_ranking)
+    # Select the tail size to use to calculate ranking.
+    df_for_ranking = df.tail(sample_size_for_ranking)
     # df = df.iloc[::-1]
 
     # Calculate percentile ranks based on the entire DataFrame
-    rank_df = df.rank(pct=True)
+    rank_df = df_for_ranking.rank(pct=True)
     # print('Rank df shape:')
     # print(df.shape)
 
-    # Select only the last 54 rows
-    df_to_plot = df.tail(rows_on_page)
+    # Sum the percentile values for each row
+    sum_percentiles = rank_df.sum(axis=1)
+
+    ##############################################
+    # Plot table to page size (54 rows)
+    ##############################################
+    df_to_plot = df_for_ranking.tail(rows_on_page)
 
     fig, ax = plt.subplots(figsize=(17, 12))
-    plt.title(plot_title, fontsize=16, fontweight='bold')
+    plt.title(f'{plot_title} Heat map of percentiles', fontsize=16, fontweight='bold')
     ax.axis('off')
 
     # Use the calculated ranks for the entire DataFrame
@@ -2010,6 +2007,61 @@ def plot_table(csv, plot_title):
     tbl.set_fontsize(10)
     tbl.scale(1, 1)
 
+    pdf.savefig()
+    plt.close()
+
+    ##############################################
+    # Plot score graph
+    ##############################################
+    df['Score'] = sum_percentiles
+    p1 = df.tail(lookback)
+
+    # Ensure p1.index is a DatetimeIndex before using strftime
+    if not isinstance(p1.index, pd.DatetimeIndex):
+        # Convert index to DatetimeIndex
+        # print(f'df index is: {type(p1.index)}')
+        p1.index = pd.to_datetime(p1.index)
+
+    date_labels = p1.index.strftime("%d/%m/%y").tolist()
+    # print(f'df index is: {type(p1.index)}')
+
+    p1 = p1.reset_index(drop=True)  # df now has sequential index. Must use DateLabels as x-axis labels
+
+    fig, ax1 = plt.subplots(figsize=(17, 6))
+
+    # Plotting sum_percentiles on the left y-axis
+    ax1.plot(p1.index, p1['Score'], label='Percentile Score', color='lightblue', linestyle='-', linewidth=1)
+    ax1.set_ylabel('Score (Sum of Percentiles)', color='blue', fontsize=14)
+    ax1.tick_params(axis='y', labelcolor='black')
+
+    # Calculate Exponential Moving Average (EMA) of Score with a span of 5
+    ema_5 = p1['Score'].ewm(span=5, adjust=False).mean()
+
+    # Plotting EMA on the left y-axis
+    ax1.plot(p1.index, ema_5, label='Score 5-Day EMA', color='blue', linestyle='--', linewidth=1)
+
+    # Adding Adj_Close on the right y-axis
+    ax2 = ax1.twinx()
+    ax2.plot(p1.index, p1['Adj Close'], color='black', linestyle='-', linewidth=1)
+    ax2.fill_between(p1.index, 0, p1['Adj Close'], color='lightgrey', alpha=0.1, label=idx, zorder=1)
+    ax2.set_ylabel('Index Close', color='black', fontsize=14)
+    ax2.tick_params(axis='y', labelcolor='black')
+    ax2.set_ylim(bottom=min(p1['Adj Close']), top=max(p1['Adj Close']))
+
+    # Set x-ticks and x-tick labels for the second y-axis
+    ax1.set_xticks(p1.index[::xlabel_separation])
+    ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
+    # Combine legends for both subplots
+    lines, labels = ax1.get_legend_handles_labels()
+    ax1.legend(lines, labels, loc='upper left')
+    lines_twin, labels_twin = ax2.get_legend_handles_labels()
+    ax1.legend(lines + lines_twin, labels + labels_twin, loc='upper left')
+
+    # Title for the plot
+    plt.suptitle(f'{idx} {plot_title} Score (Sum of percentiles)', fontweight='bold')
+
+    # Saving the graph plot to PDF
     pdf.savefig()
     plt.close()
 
@@ -2132,7 +2184,7 @@ for nums in mkt_list:
             mov_avgs_df = calculate_moving_averages(comp_df['Adj Close'], mas_to_use, 'Close')
 
             # Multiindex dataframe with all tickers and their Traders Eden EMA's: 8, 80.
-            traders_eden_mas = calculate_traders_edens(comp_df['Adj Close'],idx_df['Close'], idx_code)
+            traders_eden_mas = calculate_traders_edens(comp_df['Adj Close'], idx_df['Close'], idx_code)
 
             # Dataframe of the sum of average difference between MAs and close for whole market
             ma_c_diff_df = difference_close_to_ma(comp_df['Adj Close'], idx_df['Adj Close'], mov_avgs_df, idx_code)
@@ -2187,7 +2239,7 @@ for nums in mkt_list:
 
             # print(stockbee_df.tail(20))
             stockbee_df.to_csv('stockbee_df.csv')
-            plot_table('stockbee_df.csv', 'Breadth Monitor')
+            plot_table_and_score('stockbee_df.csv', 'Breadth Monitor', idx_code)
 
             ##############################
             # Highs and Lows Table
@@ -2197,7 +2249,7 @@ for nums in mkt_list:
                                   'ATH-ATL', '12MH-12ML', '3MH-3ML',
                                   'Adj Close']]
             hilo_df.to_csv('hilo_df.csv')
-            plot_table('hilo_df.csv', 'Highs and Lows')
+            plot_table_and_score('hilo_df.csv', 'Highs and Lows', idx_code)
 
             ##############################
             # Short Term Movers Table
@@ -2218,7 +2270,7 @@ for nums in mkt_list:
             short_term_movers.rename(columns={'adv_dec_ratio': 'ADR'}, inplace=True)
 
             short_term_movers.to_csv('short_term_movers.csv')
-            plot_table('short_term_movers.csv', 'Short term movers')
+            plot_table_and_score('short_term_movers.csv', 'Short term movers', idx_code)
 
 # Check if the PDF file exists in the folder
 pdf_filename = os.path.join(pdf_folder, '^BVSP.pdf')
