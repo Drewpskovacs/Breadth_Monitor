@@ -62,7 +62,7 @@ rows = 20
 percentiles = [0, 0.1, 0.2, 0.8, 0.9]
 percentile_color = {0: 'red', 0.1: 'orange', 0.2: 'white', 0.8: 'lightgreen', 0.9: 'green'}
 # Rows to use for ranking calculations
-sample_size_for_ranking = 300
+sample_size_for_ranking = 1000
 
 
 # -----------------------------FUNCTIONS----------------------------------
@@ -443,7 +443,7 @@ def plot_close_and_volume(df_idx, idx):
     fig, ax1 = plt.subplots(figsize=(17, 12))
 
     # Plot closing price on the first y-axis
-    ax1.set_ylabel('Close', color='blue')
+    ax1.set_ylabel('Close (log scale)', color='blue')
     ax1.plot(p1.index, p1['Adj Close'])
     ax1.tick_params(axis='y')
     ax1.set_yscale('log')
@@ -787,10 +787,13 @@ def calculate_traders_edens(df_close, idx_data, idx):
         df_te.loc[mask_if_both_1, col] = 1
         df_te.loc[mask_if_both_neg1, col] = -1
 
-    # Calculate Eden_Up and Eden_Down
+    # Calculate Eden_Up and Eden_Down as %
+    num_tickers = df_te.shape[1]
     eden_df = pd.DataFrame(index=df_te.index)
-    eden_df['Eden_Up'] = df_te.eq(1).sum(axis=1)
-    eden_df['Eden_Down'] = -df_te.eq(-1).sum(axis=1)
+    eden_df['Eden_Up'] = 100 * df_te.eq(1).sum(axis=1) / num_tickers
+    eden_df['Eden_Down'] = 100 * -df_te.eq(-1).sum(axis=1) / num_tickers
+    # Calculate difference b adding. Note: Eden_Down is already negative
+    eden_df['Diff'] = eden_df['Eden_Up'] + eden_df['Eden_Down']
     eden_df[idx] = idx_data.round(0)
 
     #############################################
@@ -802,13 +805,14 @@ def calculate_traders_edens(df_close, idx_data, idx):
 
     fig, ax1 = plt.subplots(figsize=(17, 12))
 
-    ax1.bar(p1.index, p1['Eden_Up'], color='palegreen', label='Eden_Up')
-    ax1.bar(p1.index, p1['Eden_Down'], color='lightcoral', label='Eden_Down')
+    ax1.plot(p1.index, p1['Eden_Up'], color='palegreen', label='Eden_Up %')
+    ax1.plot(p1.index, p1['Eden_Down'], color='lightcoral', label='Eden_Down %')
+    ax1.bar(p1.index, p1['Diff'], color='lightblue', label="Difference (Up-Down)")
     ax1.set_xlabel('Date')
     ax1.set_xticks(p1.index[::xlabel_separation])
     ax1.set_xticklabels(date_labels[::xlabel_separation], rotation=45)
-    ax1.set_ylabel('Count')
-    ax1.set_title(f"{idx} - Number of stocks in Traders Eden. +ve = Bull and -ve = Bear")
+    ax1.set_ylabel('% in Eden')
+    ax1.set_title(f"{idx} - % of stocks in Up/Down Traders Eden. (8/80 EMA same direction")
     ax1.legend(loc='upper left')
 
     ax2 = ax1.twinx()
@@ -1570,32 +1574,33 @@ def movers(df_close, idx, df_close_idx):
     axs[0].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
 
     #############################################################################
-    # 2nd subplot Short term POSITIVE MOVERS
+    # 2nd subplot LT NEGATIVE MOVERS
     #############################################################################
 
     # Create a stacked bar chart
     bottom = None
-    to_plot = st_p1.columns[1:]
-    # for col in p1.columns[1:]:
+    to_plot = p2.columns[1:]
+
     for col in to_plot:
-        axs[1].bar(st_p1.index, st_p1[col], label=col, bottom=bottom)
+        # for col in p2.columns[1:]:
+        axs[1].bar(p2.index, -p2[col], label=col, bottom=bottom)
         if bottom is None:
-            bottom = st_p1[col]
+            bottom = -p2[col]
         else:
-            bottom += st_p1[col]
+            bottom += -p2[col]
 
-    axs[1].set_xticks(st_p1.index[::xlabel_separation])
+    # Adding the x-axis with dates every 5
+    axs[1].set_xticks(p2.index[::xlabel_separation])
     axs[1].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
-
     # Adding labels for both y-axes
-    axs[1].set_ylabel('Short Term Plus % movers')
+    axs[1].set_ylabel('Negative % Movers')
     # Add title for plot
-    axs[1].set_title(f"{idx} - Short Term Positive Movers")
+    axs[1].set_title(f"{idx} - Negative Movers")
 
     # Creating the second y-axis on the right
     axs1_twin = axs[1].twinx()
-    axs1_twin.fill_between(st_p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
-    axs1_twin.plot(st_p1.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
+    axs1_twin.fill_between(p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
+    axs1_twin.plot(p2.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
     axs1_twin.set_ylim(bottom=min(pidx), top=max(pidx))
     axs1_twin.set_ylabel(idx, color='black')
 
@@ -1605,33 +1610,32 @@ def movers(df_close, idx, df_close_idx):
     axs[1].legend(lines + lines_twin, labels + labels_twin, loc='upper left')
 
     #############################################################################
-    # 3rd subplot LT NEGATIVE MOVERS
+    # 2nd subplot Short term POSITIVE MOVERS
     #############################################################################
 
     # Create a stacked bar chart
     bottom = None
-    to_plot = p2.columns[1:]
-
+    to_plot = st_p1.columns[1:]
+    # for col in p1.columns[1:]:
     for col in to_plot:
-        # for col in p2.columns[1:]:
-        axs[2].bar(p2.index, -p2[col], label=col, bottom=bottom)
+        axs[2].bar(st_p1.index, st_p1[col], label=col, bottom=bottom)
         if bottom is None:
-            bottom = -p2[col]
+            bottom = st_p1[col]
         else:
-            bottom += -p2[col]
+            bottom += st_p1[col]
 
-    # Adding the x-axis with dates every 5
-    axs[2].set_xticks(p2.index[::xlabel_separation])
+    axs[2].set_xticks(st_p1.index[::xlabel_separation])
     axs[2].set_xticklabels(date_labels[::xlabel_separation], rotation=45)
+
     # Adding labels for both y-axes
-    axs[2].set_ylabel('Negative % Movers')
+    axs[2].set_ylabel('Short Term Plus % movers')
     # Add title for plot
-    axs[2].set_title(f"{idx} - Negative Movers")
+    axs[2].set_title(f"{idx} - Short Term Positive Movers")
 
     # Creating the second y-axis on the right
     axs2_twin = axs[2].twinx()
-    axs2_twin.fill_between(p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
-    axs2_twin.plot(p2.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
+    axs2_twin.fill_between(st_p1.index, 0, pidx, color='lightgrey', alpha=0.3, label=idx, zorder=-1)  # Light grey area
+    axs2_twin.plot(st_p1.index, pidx, 'black', label=idx, linewidth=1, zorder=-1)
     axs2_twin.set_ylim(bottom=min(pidx), top=max(pidx))
     axs2_twin.set_ylabel(idx, color='black')
 
